@@ -1,9 +1,37 @@
+"""
+Copyright (c) 2015-2016 Constantine Belev
+
+
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+"""
+
 import numpy as np
 import scipy as sp
 
 from scipy import linalg
 
-from riemannian_optimization.utils.approx_utils import csvd, tsvd
+from riemannian_optimization.utils.approx_utils import csvd
 
 
 def orth(a):
@@ -15,6 +43,17 @@ def torth(a):
 
 
 def indices_unveil(self, indices):
+    """
+
+    Parameters
+    ----------
+    self
+    indices
+
+    Returns
+    -------
+
+    """
     indices = np.asarray(indices)
     return np.vstack([np.repeat(indices[0], indices[1].size),
                np.tile(indices[1], indices[0].size)]).T
@@ -193,86 +232,3 @@ class ManifoldElement(object):
 
     def frobenius_norm(self):
         return np.linalg.norm(self.s)
-
-
-class MatrixLowRank(object):
-    def __init__(self, data, r=None):
-        if type(data) == np.ndarray:
-            if len(data.shape) != 2:
-                raise ValueError('supports only 2d arrays')
-            self.r = min(data.shape) if r is None else r
-            self.shape = data.shape
-            self.u, s, self.v = csvd(data, self.r)
-            self.norm = np.linalg.norm(s)
-            s /= self.norm
-            self.v = np.dot(np.diag(s), self.v)
-        if type(data) == tuple:
-            if len(data) == 2:
-                u, v = data
-                # we have u, v matrices
-                if (u.shape[1] != v.shape[0]):
-                    raise ValueError('u, v must be multiplicable, but have shapes {}, {}'.format(u.shape, v.shape))
-                self.r = u.shape[1] if r is None else r
-                rt, qt = sp.linalg.rq(v, mode='economic')
-                u = u.dot(rt)
-                self.shape = (u.shape[0], v.shape[1])
-                self.u, s, v = csvd(u, self.r)
-                self.norm = np.linalg.norm(s)
-                if self.norm == 0:
-                    self.v = np.zeros_like(qt)
-                    return
-                s /= self.norm
-                self.v = np.diag(s).dot(np.dot(v, qt))
-            else:
-                raise ValueError('supports only a = uv matrix factorization')
-
-    def __add__(self, other):
-        if type(other) != MatrixLowRank:
-            raise ValueError('second summand must be matrix_lowrank')
-        r = self.r + other.r
-        return MatrixLowRank((np.hstack([self.u, other.u]), np.vstack([self.norm * self.v, other.norm * other.v])), r)
-
-    def __radd__(self, other):
-        if type(other) != MatrixLowRank:
-            raise ValueError('second summand must be matrix_lowrank')
-        return other.__add__(self)
-
-    def __sub__(self, other):
-        if type(other) != MatrixLowRank:
-            raise ValueError('second summand must be matrix_lowrank')
-        r = self.r + other.r
-        return MatrixLowRank((np.hstack([self.u, other.u]), np.vstack([self.norm * self.v, -other.norm * other.v])), r)
-
-    def __rsub__(self, other):
-        if type(other) != MatrixLowRank:
-            raise ValueError('second summand must be matrix_lowrank')
-        return other.__sub__(self)
-
-    def indices_unveil(self, indices):
-        indices = np.asarray(indices)
-        return np.vstack([np.repeat(indices[0], indices[1].size),
-                   np.tile(indices[1], indices[0].size)]).T
-
-    def __getitem__(self, indices):
-        assert len(indices) == 2, 'indices must be 2 dimensional'
-        indx, indy = indices
-        if np.isscalar(indx):
-            # two scalar indices
-            assert np.isscalar(indy)
-            return np.dot(self.u[indx] * self.s, self.v[:, indy])
-        else:
-            # two vector indices
-            assert len(indx) == len(indy)
-
-
-    def round(self, eps=1e-8):
-        rt, qt = sp.linalg.rq(self.v)
-        u = self.u.dot(rt)
-        self.u, s, v = tsvd(u, delta=np.linalg.norm(u)*eps)
-        self.r = s.size
-        self.norm *= np.linalg.norm(s)
-        s /= np.linalg.norm(s)
-        self.v = np.diag(s).dot(v.dot(qt))
-
-    def full_matrix(self):
-        return np.dot(self.u, self.norm * self.v)
