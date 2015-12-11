@@ -29,7 +29,9 @@ THE SOFTWARE.
 import numpy as np
 import scipy as sp
 
-from scipy import linalg
+from scipy import sparse
+
+from scipy.sparse import coo_matrix, csr_matrix
 
 from riemannian_optimization.utils.approx_utils import csvd
 
@@ -56,7 +58,7 @@ def indices_unveil(self, indices):
     """
     indices = np.asarray(indices)
     return np.vstack([np.repeat(indices[0], indices[1].size),
-               np.tile(indices[1], indices[0].size)]).T
+                      np.tile(indices[1], indices[0].size)]).T
 
 
 class ManifoldElement(object):
@@ -97,7 +99,8 @@ class ManifoldElement(object):
                 # we have u, v matrices
                 u, v = data
                 if u.shape[1] != v.shape[0]:
-                    raise ValueError('u, v must be composable, but have shapes {}, {}'.format(u.shape, v.shape))
+                    raise ValueError(
+                        'u, v must be composable, but have shapes {}, {}'.format(u.shape, v.shape))
                 self.r = u.shape[1] if r in None else min(u.shape[1], r)
                 rt, qt = sp.linalg.rq(v, mode='economic')
                 u = u.dot(rt)
@@ -172,11 +175,13 @@ class ManifoldElement(object):
             factorization = (u, s, v)
             return ManifoldElement(factorization)
         else:
-            raise ValueError("operation is not supported for ManifoldElement and {}".format(type(other)))
+            raise ValueError(
+                "operation is not supported for ManifoldElement and {}".format(type(other)))
 
     def __radd__(self, other):
         if type(other) not in [np.ndarray, ManifoldElement]:
-            raise ValueError("operation is not supported for ManifoldElement and {}".format(type(other)))
+            raise ValueError(
+                "operation is not supported for ManifoldElement and {}".format(type(other)))
         # because of addition commutativity
         return self.__add__(other)
 
@@ -187,11 +192,13 @@ class ManifoldElement(object):
         elif type(other) == ManifoldElement:
             return self + (-other)
         else:
-            raise ValueError("operation is not supported for ManifoldElement and {}".format(type(other)))
+            raise ValueError(
+                "operation is not supported for ManifoldElement and {}".format(type(other)))
 
     def __rsub__(self, other):
         if type(other) not in [np.ndarray, ManifoldElement]:
-            raise ValueError("operation is not supported for ManifoldElement and {}".format(type(other)))
+            raise ValueError(
+                "operation is not supported for ManifoldElement and {}".format(type(other)))
         # because of addition commutativity
         return self.__add__(other)
 
@@ -220,7 +227,8 @@ class ManifoldElement(object):
 
     def dot(self, other):
         if type(other) not in [np.ndarray, ManifoldElement]:
-            raise ValueError("operation not supported for ManifoldElement and {}".format(type(other)))
+            raise ValueError(
+                "operation not supported for ManifoldElement and {}".format(type(other)))
         r_factor = np.dot(np.diag(self.s), self.v.dot(other.u)).dot(np.diag(other.s))
         u, s, v = np.linalg.svd(r_factor, full_matrices=False)
         u = self.u.dot(u)
@@ -232,3 +240,9 @@ class ManifoldElement(object):
 
     def frobenius_norm(self):
         return np.linalg.norm(self.s)
+
+    def evaluate(self, sigma_set):
+        res = coo_matrix(shape=self.shape)
+        for (i, j) in sigma_set:
+            res[i, j] = np.dot(self.u[i, :] * self.s, self.v[:, j])
+        return csr_matrix(res)
