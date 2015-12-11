@@ -28,3 +28,4 @@ THE SOFTWARE.
 
 from csvd import csvd
 from tsvd import tsvd
+from relative_error import rel_error
