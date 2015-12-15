@@ -120,8 +120,6 @@ def test_dot_product(shape, r, niter=10):
         strict_check(left_element.dot(right_full), left_full.dot(right_full))
 
 
-
-
 if __name__ == '__main__':
     # shape, r, niter
     args = ((100, 50), 10, 10)
