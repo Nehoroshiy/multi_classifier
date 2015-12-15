@@ -29,9 +29,9 @@ THE SOFTWARE.
 import numpy as np
 import scipy as sp
 
-from scipy import sparse
+from scipy import linalg, sparse
 
-from scipy.sparse import coo_matrix, csr_matrix
+from scipy.sparse import coo_matrix, csr_matrix, csc_matrix
 
 from riemannian_optimization.utils.approx_utils import csvd
 
@@ -65,12 +65,7 @@ class ManifoldElement(object):
     def __init__(self, data, r=None):
         if type(data) == ManifoldElement:
             if r is None:
-                # copy constructor
-                self.u = data.u.copy()
-                self.s = data.s.copy()
-                self.v = data.v.copy()
-                self.shape = data.shape
-                self.r = data.r
+                ManifoldElement.__init__(self, data, data.r)
                 return
             elif r <= data.r:
                 self.u = data.u[:, :r].copy()
@@ -101,22 +96,20 @@ class ManifoldElement(object):
                 if u.shape[1] != v.shape[0]:
                     raise ValueError(
                         'u, v must be composable, but have shapes {}, {}'.format(u.shape, v.shape))
-                self.r = u.shape[1] if r in None else min(u.shape[1], r)
-                rt, qt = sp.linalg.rq(v, mode='economic')
-                u = u.dot(rt)
+                self.r = u.shape[1] if r is None else min(u.shape[1], r)
                 self.shape = (u.shape[0], v.shape[1])
-                self.u, self.s, v = csvd(u, self.r)
-                """
-                if np.linalg.norm(self.s) == 0:
-                    self.u = np.zeros(self.shape[0]).reshape((-1, 1))
-                    self.s = np.zeros(1)
-                    self.v = np.zeros(self.shape[1]).reshape((1, -1))
-                """
-                if np.linalg.norm(self.s) == 0:
-                    self.u = np.zeros((self.shape[0], self.r)).reshape((-1, self.r))
-                    self.s = np.zeros(self.r)
-                    self.v = np.zeros((self.r, self.shape[1])).reshape((self.r, -1))
-                self.v = v.dot(qt[:self.r, :])
+                self.u, self.s, self.v = u, np.ones(self.r), v
+                self.balance()
+
+                # rt, qt = sp.linalg.rq(v, mode='economic')
+                # u = u.dot(rt)
+                # self.shape = (u.shape[0], v.shape[1])
+                # self.u, self.s, v = csvd(u, self.r)
+                #if np.linalg.norm(self.s) == 0:
+                #    self.u = np.zeros((self.shape[0], self.r)).reshape((-1, self.r))
+                #    self.s = np.zeros(self.r)
+                #    self.v = np.zeros((self.r, self.shape[1])).reshape((self.r, -1))
+                #self.v = v.dot(qt[:self.r, :])
                 return
             elif len(data) == 3:
                 # we have u, s, v^t factorization (numpy-like)
@@ -125,8 +118,8 @@ class ManifoldElement(object):
                 u, s, v = data
                 if len(s.shape) == 2:
                     s = np.diag(s)
-                if not orth(u) or not torth(v):
-                    raise ValueError('u and v must be orthogonal as SVD factors')
+                #if not orth(u) or not torth(v):
+                #    raise ValueError('u and v must be orthogonal as SVD factors')
                 if u.shape[1] != v.shape[0] or u.shape[1] != s.size:
                     raise ValueError('u, s, v must be svd factorization of some matrix')
                 self.r = u.shape[1] if r is None else min(r, u.shape[1])
@@ -139,6 +132,7 @@ class ManifoldElement(object):
                 if not np.allclose(self.s.argsort(), np.arange(self.s.size)[::-1]):
                     # we need to rearrange svd decomposition
                     self.rearrange()
+                self.balance()
                 return
             else:
                 raise ValueError("Arguments in tuple are not supported")
@@ -156,6 +150,71 @@ class ManifoldElement(object):
         self.v = self.v[permutation, :]
         self.s = self.s[permutation]
         return
+
+    def _balance_right(self):
+        """
+        We only have non-orthogonal v factor, so we need to orthogonalize
+        it
+        Returns
+        -------
+        None
+        """
+        u, self.s, self.v = csvd(np.diag(self.s).dot(self.v))
+        self.u = self.u.dot(u)
+        return
+
+    def _balance_left(self):
+        """
+        We only have non-orthogonal u factor, so we need to orthogonalize
+        it
+        Returns
+        -------
+        None
+        """
+        self.u, self.s, v = csvd(self.u.dot(np.diag(self.s)))
+        self.v = v.dot(self.v)
+        return
+
+    def _balance(self):
+        """
+        All factors are non-orthogonal, so we need full orthogonalization
+        Returns
+        -------
+        None
+        """
+        mid, self.v = sp.linalg.rq(self.v)
+        self.u = self.u.dot(np.diag(self.s).dot(mid))
+        self.u, self.s, v = csvd(self.u)
+        self.v = v.dot(self.v)
+        return
+
+    def balance(self):
+        """
+        Performs reorthogonalization of factors, if it needs
+        Returns
+        -------
+        None
+        """
+        left_balanced = orth(self.u)
+        right_balanced = orth(self.v.T)
+        if left_balanced:
+            if right_balanced:          # it's all OK
+                pass
+            else:
+                self._balance_right()
+        else:
+            if right_balanced:
+                self._balance_left()
+            else:
+                self._balance()
+        return
+
+    def valid(self):
+        left_balanced = orth(self.u)
+        right_balanced = orth(self.v.T)
+        sigma_sorted = \
+            np.allclose(self.s.argsort(), np.arange(self.s.size)[::-1])
+        return left_balanced and right_balanced and sigma_sorted
 
     def __add__(self, other):
         if type(other) == np.ndarray:
@@ -226,14 +285,17 @@ class ManifoldElement(object):
             raise NotImplementedError('rmul operator is not implemented, except for scalars')
 
     def dot(self, other):
-        if type(other) not in [np.ndarray, ManifoldElement]:
-            raise ValueError(
-                "operation not supported for ManifoldElement and {}".format(type(other)))
-        r_factor = np.dot(np.diag(self.s), self.v.dot(other.u)).dot(np.diag(other.s))
-        u, s, v = np.linalg.svd(r_factor, full_matrices=False)
-        u = self.u.dot(u)
-        v = v.dot(other.v)
-        return ManifoldElement((u, s, v))
+        if self.shape[1] != other.shape[0]:
+            raise ValueError("shapes must match!")
+        if type(other) is ManifoldElement:
+            r_mid = np.dot(np.diag(self.s), self.v.dot(other.u)).dot(np.diag(other.s))
+            u, s, v = np.linalg.svd(r_mid, full_matrices=False)
+            u = self.u.dot(u)
+            v = v.dot(other.v)
+            return ManifoldElement((u, s, v))
+        elif type(other) is np.ndarray:
+            # TODO there are some ways to optimize (all balance work gone to constructor)
+            return ManifoldElement((self.u, self.s, self.v.dot(other)))
 
     def full_matrix(self):
         return self.u.dot(np.diag(self.s)).dot(self.v)
@@ -246,3 +308,13 @@ class ManifoldElement(object):
         for (i, j) in sigma_set:
             res[i, j] = np.dot(self.u[i, :] * self.s, self.v[:, j])
         return csr_matrix(res)
+
+    @staticmethod
+    def rand(shape, r, desired_norm=None):
+        m, n = shape
+        u = np.linalg.qr(np.random.randn(m, r))[0]
+        s = np.sort(np.abs(np.random.randn(r)))[::-1]
+        if desired_norm is not None:
+            s *= (desired_norm / np.linalg.norm(s))
+        v = sp.linalg.rq(np.random.randn(r, n), mode='economic')[1]
+        return ManifoldElement((u, s, v))
