@@ -32,7 +32,7 @@ from lowrank_matrix import ManifoldElement
 
 
 def strict_check(manifold_element, original_matrix):
-    assert (np.allclose(manifold_element.full_matrix(), original_matrix))
+    assert(np.allclose(manifold_element.full_matrix(), original_matrix))
 
 
 def test_constructor_matrix(shape, r):
