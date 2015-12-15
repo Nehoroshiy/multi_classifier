@@ -312,7 +312,7 @@ class ManifoldElement(object):
 
         Parameters
         ----------
-        other : np.ndarray or ManifoldElement
+        other : sp.sparse.spmatrix, np.ndarray or ManifoldElement
             matrix to perform matrix product
 
         Returns
@@ -331,6 +331,8 @@ class ManifoldElement(object):
         elif type(other) is np.ndarray:
             # TODO there are some ways to optimize (all balance work gone to constructor)
             return ManifoldElement((self.u, self.s, self.v.dot(other)))
+        elif sp.sparse.issparse(other):
+            return ManifoldElement((self.u, self.s, csc_matrix(other).__rmul__(self.v)))
 
     def full_matrix(self):
         """
