@@ -42,12 +42,12 @@ np.set_printoptions(linewidth=450, suppress=True)
 
 def all_indices(m, n):
     mg = np.meshgrid(np.arange(n), np.arange(m))
-    mg = map(lambda x: x.ravel(), mg[::-1])
+    mg = list(map(lambda x: x.ravel(), mg[::-1]))
     return mg
 
 def part(indices, percent):
     perm = np.random.permutation(indices[0].size)
-    return map(lambda x: x[perm][:int(indices[0].size * percent)], indices)
+    return list(map(lambda x: x[perm][:int(indices[0].size * percent)], indices))
 
 if __name__ == "__main__":
     """
