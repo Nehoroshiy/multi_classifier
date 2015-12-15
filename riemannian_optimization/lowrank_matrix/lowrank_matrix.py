@@ -44,6 +44,7 @@ def torth(a):
     return np.allclose(a.dot(a.T), np.eye(a.shape[0]))
 
 
+# TODO remove this function if it is not nessesary
 def indices_unveil(self, indices):
     """
 
@@ -62,6 +63,28 @@ def indices_unveil(self, indices):
 
 
 class ManifoldElement(object):
+    """
+    ManifoldElement(data, r=None)
+
+    Returns a rank-constrained SVD-based approximation of matrix, given by 2D array, or one of
+    two decompositions: $A = UV^*$ or $A =  U\SigmaV^*$, where \Sigma is diagonal
+
+    Parameters
+    ----------
+    data : array_like or (U, V) or (U, s, V) tuple
+        matrix, which approximation we want to find
+    r : int
+        rank constraint
+
+
+    Examples
+    --------
+    a = np.random.random((10, 5))
+    approx = ManifoldElement(a, r=4)
+    approx_full = approx.full_matrix()
+    print(np.linalg.norm(a - approx_full) / np.linalg.norm(a))
+
+    """
     def __init__(self, data, r=None):
         if type(data) == ManifoldElement:
             if r is None:
@@ -100,26 +123,11 @@ class ManifoldElement(object):
                 self.shape = (u.shape[0], v.shape[1])
                 self.u, self.s, self.v = u, np.ones(self.r), v
                 self.balance()
-
-                # rt, qt = sp.linalg.rq(v, mode='economic')
-                # u = u.dot(rt)
-                # self.shape = (u.shape[0], v.shape[1])
-                # self.u, self.s, v = csvd(u, self.r)
-                #if np.linalg.norm(self.s) == 0:
-                #    self.u = np.zeros((self.shape[0], self.r)).reshape((-1, self.r))
-                #    self.s = np.zeros(self.r)
-                #    self.v = np.zeros((self.r, self.shape[1])).reshape((self.r, -1))
-                #self.v = v.dot(qt[:self.r, :])
                 return
             elif len(data) == 3:
-                # we have u, s, v^t factorization (numpy-like)
-                # + maybe we have lost non-increasing property of s (due to sum operator)
-                # and we need to perform rearrange
                 u, s, v = data
                 if len(s.shape) == 2:
                     s = np.diag(s)
-                #if not orth(u) or not torth(v):
-                #    raise ValueError('u and v must be orthogonal as SVD factors')
                 if u.shape[1] != v.shape[0] or u.shape[1] != s.size:
                     raise ValueError('u, s, v must be svd factorization of some matrix')
                 self.r = u.shape[1] if r is None else min(r, u.shape[1])
@@ -130,9 +138,8 @@ class ManifoldElement(object):
                     self.s = self.s[:self.r].copy()
                     self.v = self.v[:self.r, :].copy()
                 if not np.allclose(self.s.argsort(), np.arange(self.s.size)[::-1]):
-                    # we need to rearrange svd decomposition
-                    self.rearrange()
-                self.balance()
+                    self.rearrange()        # We lost ordering of s while performing addition
+                self.balance()              # We lost orthogonality while performing hadamard
                 return
             else:
                 raise ValueError("Arguments in tuple are not supported")
@@ -140,11 +147,14 @@ class ManifoldElement(object):
             raise ValueError("Arguments are not supported")
 
     def rearrange(self):
-        # rearrange restores SVD decomposition of A + B
-        # when we have [U_A U_B] [\Sigma_A 0 \n 0 \Sigma_B] [V_A V_B]^*
-        # block representation of sum
-        # we perform sort of singular values and permute U and V factors
-        # according to such a permutation
+        """
+        rearrange permutes U \Sigma V^* matrix to obtain
+        non-increasing property on diagonal \Sigma matrix
+
+        Returns
+        -------
+        None
+        """
         permutation = self.s.argsort()
         self.u = self.u[:, permutation]
         self.v = self.v[permutation, :]
@@ -198,7 +208,7 @@ class ManifoldElement(object):
         left_balanced = orth(self.u)
         right_balanced = orth(self.v.T)
         if left_balanced:
-            if right_balanced:          # it's all OK
+            if right_balanced:
                 pass
             else:
                 self._balance_right()
@@ -209,7 +219,19 @@ class ManifoldElement(object):
                 self._balance()
         return
 
-    def valid(self):
+    def is_valid(self):
+        """
+        Performs validness check. This include checks like:
+        * is left core (U) orthogonal?
+        * is right core (V^*) orthogonal?
+        * is singular values (\Sigma) are in non-increasing order?
+        Result will be logical and of these checks.
+
+        Returns
+        -------
+        status : bool
+            Validity status of ManifoldElement object
+        """
         left_balanced = orth(self.u)
         right_balanced = orth(self.v.T)
         sigma_sorted = \
@@ -241,7 +263,6 @@ class ManifoldElement(object):
         if type(other) not in [np.ndarray, ManifoldElement]:
             raise ValueError(
                 "operation is not supported for ManifoldElement and {}".format(type(other)))
-        # because of addition commutativity
         return self.__add__(other)
 
     def __sub__(self, other):
@@ -258,8 +279,7 @@ class ManifoldElement(object):
         if type(other) not in [np.ndarray, ManifoldElement]:
             raise ValueError(
                 "operation is not supported for ManifoldElement and {}".format(type(other)))
-        # because of addition commutativity
-        return self.__add__(other)
+        return self.__sub__(other)
 
     def __neg__(self):
         return ManifoldElement((-self.u, self.s, self.v))
@@ -267,8 +287,8 @@ class ManifoldElement(object):
     def __mul__(self, other):
         if np.isscalar(other):
             return ManifoldElement((self.u, self.s * other, self.v))
-        # TODO u and v factors are not orthogonal!
-        assert self.shape == other.shape
+        if self.shape != other.shape:
+            raise ValueError("Shapes {} and {} are not equal.".format(self.shape, other.shape))
         u = np.zeros((self.shape[0], self.r * other.r))
         for i in range(self.shape[0]):
             u[i, :] = np.kron(self.u[i, :], other.u[i, :])
@@ -279,12 +299,27 @@ class ManifoldElement(object):
         return ManifoldElement((u, s, v))
 
     def __rmul__(self, other):
+        # TODO do we need this right-side operator?
+        # if yes, make it more clever
         if np.isscalar(other):
             return ManifoldElement((self.u, self.s * other, self.v))
         else:
             raise NotImplementedError('rmul operator is not implemented, except for scalars')
 
     def dot(self, other):
+        """
+        Matrix product. Supports np.ndarray or ManifoldElement right side
+
+        Parameters
+        ----------
+        other : np.ndarray or ManifoldElement
+            matrix to perform matrix product
+
+        Returns
+        -------
+        prod : ManifoldElement
+            matrix product
+        """
         if self.shape[1] != other.shape[0]:
             raise ValueError("shapes must match!")
         if type(other) is ManifoldElement:
@@ -298,12 +333,40 @@ class ManifoldElement(object):
             return ManifoldElement((self.u, self.s, self.v.dot(other)))
 
     def full_matrix(self):
+        """
+        Retrieve full matrix from it's decomposition
+
+        Returns
+        -------
+        a : np.ndarray
+            full matrix, given by approximation
+        """
         return self.u.dot(np.diag(self.s)).dot(self.v)
 
     def frobenius_norm(self):
+        """
+        Frobenius norm of matrix approximation
+
+        Returns
+        -------
+        n : float
+            norm of the matrix
+        """
         return np.linalg.norm(self.s)
 
     def evaluate(self, sigma_set):
+        """
+        Retrieve values of full matrix only on a given set of indices
+
+        Parameters
+        ----------
+        sigma_set : array_like
+
+        Returns
+        -------
+        out : csr_matrix
+            full matrix evaluated at sigma_set
+        """
         res = coo_matrix(shape=self.shape)
         for (i, j) in sigma_set:
             res[i, j] = np.dot(self.u[i, :] * self.s, self.v[:, j])
@@ -311,7 +374,29 @@ class ManifoldElement(object):
 
     @staticmethod
     def rand(shape, r, desired_norm=None):
+        """
+        Generates ManifoldElement with parameters:
+        * U (shape[0], r) with elements picked from N(0, 1)
+        * \Sigma with sorted elements picked from N(0, 1), with desired norm, if given
+        * V^* (r, shape[1]) with elements picked from N(0, 1)
+        where N(0, 1) means standard normal distribution
+
+        Parameters
+        ----------
+        shape : tuple of ints
+            Output shape.
+        r : int
+            Desired rank
+        desired_norm : float, optional
+            Desired frobenius norm of matrix
+
+        Returns
+        -------
+            out : ManifoldElement
+                Randomly generated matrix
+        """
         m, n = shape
+
         u = np.linalg.qr(np.random.randn(m, r))[0]
         s = np.sort(np.abs(np.random.randn(r)))[::-1]
         if desired_norm is not None:
