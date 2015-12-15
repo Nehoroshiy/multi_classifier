@@ -40,10 +40,12 @@ from riemannian_optimization.gd.gradient import approximate
 
 np.set_printoptions(linewidth=450, suppress=True)
 
+
 def all_indices(m, n):
     mg = np.meshgrid(np.arange(n), np.arange(m))
     mg = list(map(lambda x: x.ravel(), mg[::-1]))
     return mg
+
 
 def part(indices, percent):
     perm = np.random.permutation(indices[0].size)
@@ -83,21 +85,3 @@ if __name__ == "__main__":
 
     plt.plot(np.arange(len(err))[100:], err[100:])
     plt.show()
-"""
-if __name__ == "__main__":
-    m = 100
-    n = 500
-    #
-    x = np.random.random((m, n))
-    y = np.random.random((m, n))
-    #
-    mx = ManifoldElement(x, r=4)
-    my = ManifoldElement(y, r=4)
-    #
-    x_full = mx.full_matrix()
-    y_full = my.full_matrix()
-    z_full_expected = x_full + y_full
-    #
-    mz = mx + my
-    print(norm(mz.full_matrix() - z_full_expected))
-"""
