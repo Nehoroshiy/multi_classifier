@@ -28,47 +28,17 @@ THE SOFTWARE.
 
 import numpy as np
 
-from matplotlib import pyplot as plt
 
-from numpy.linalg import norm
-
-from riemannian_optimization.gd.gradient import approximate
-from riemannian_optimization.utils.test_utils import generate_sigma_set
-
-np.set_printoptions(linewidth=450, suppress=True)
+def all_indices(m, n):
+    mg = np.meshgrid(np.arange(n), np.arange(m))
+    mg = list(map(lambda x: x.ravel(), mg[::-1]))
+    return mg
 
 
-if __name__ == "__main__":
-    """
-    m, n = 10, 5
-    M = 50
-    percent = .8
-    a = np.random.random((m, n))
-    """
-    m, n = (10, 10)
-    M = 50
-    percent = 0.8
-    a = 10*np.arange(m)[:, None] + np.arange(n)
-    #sigma_set = (np.random.choice(m, M, replace=True), np.random.choice(n, M, replace=True))
+def part(indices, percent):
+    perm = np.random.permutation(indices[0].size)
+    return list(map(lambda x: x[perm][:int(indices[0].size * percent)], indices))
 
-    sigma_set = generate_sigma_set((m, n), percent)
-    print(sigma_set[0].size)
-    r = 2
-    x, it, err = approximate(a, sigma_set, r)
-    print('norm of x - a: {}'.format(norm(x.full_matrix() - a)))
 
-    print('full matrix x:')
-    print(x.full_matrix())
-
-    print('-'*80)
-
-    print('full matrix a: ')
-    print(a)
-
-    print('-'*80)
-
-    print('delta x and a')
-    print(x.full_matrix() - a)
-
-    plt.plot(np.arange(len(err))[100:], err[100:])
-    plt.show()
+def generate_sigma_set(shape, percent):
+    return part(all_indices(*shape), percent)

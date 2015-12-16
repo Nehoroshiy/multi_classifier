@@ -27,33 +27,21 @@ THE SOFTWARE.
 """
 
 import numpy as np
-import scipy as sp
 
-from scipy import sparse
 from matplotlib import pyplot as plt
 
-from scipy.sparse import linalg, csr_matrix, lil_matrix
+from scipy.sparse import csr_matrix, lil_matrix
 
 from riemannian_optimization.sparse.gd import gd_approximate
+from riemannian_optimization.utils.test_utils import generate_sigma_set
 
 np.set_printoptions(linewidth=450, suppress=True)
-
-
-def all_indices(m, n):
-    mg = np.meshgrid(np.arange(n), np.arange(m))
-    mg = list(map(lambda x: x.ravel(), mg[::-1]))
-    return mg
-
-
-def part(indices, percent):
-    perm = np.random.permutation(indices[0].size)
-    return list(map(lambda x: x[perm][:int(indices[0].size * percent)], indices))
 
 
 if __name__ == "__main__":
     shape = (10, 10)
     percent = 0.9
-    sigma_set = part(all_indices(*shape), percent)
+    sigma_set = generate_sigma_set(shape, percent)
     r = 2
     a_full = 10*np.arange(shape[0])[:, None] + np.arange(shape[1])
     a_sparse = lil_matrix(shape)

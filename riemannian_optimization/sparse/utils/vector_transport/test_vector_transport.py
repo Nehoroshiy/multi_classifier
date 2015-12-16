@@ -26,49 +26,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-import numpy as np
+from basic_vector_transport import vector_transport_base
 
-from matplotlib import pyplot as plt
 
-from numpy.linalg import norm
-
-from riemannian_optimization.gd.gradient import approximate
-from riemannian_optimization.utils.test_utils import generate_sigma_set
-
-np.set_printoptions(linewidth=450, suppress=True)
-
+def obvious_test(shape, r, niter=10):
+    a
 
 if __name__ == "__main__":
-    """
-    m, n = 10, 5
-    M = 50
-    percent = .8
-    a = np.random.random((m, n))
-    """
-    m, n = (10, 10)
-    M = 50
-    percent = 0.8
-    a = 10*np.arange(m)[:, None] + np.arange(n)
-    #sigma_set = (np.random.choice(m, M, replace=True), np.random.choice(n, M, replace=True))
-
-    sigma_set = generate_sigma_set((m, n), percent)
-    print(sigma_set[0].size)
-    r = 2
-    x, it, err = approximate(a, sigma_set, r)
-    print('norm of x - a: {}'.format(norm(x.full_matrix() - a)))
-
-    print('full matrix x:')
-    print(x.full_matrix())
-
-    print('-'*80)
-
-    print('full matrix a: ')
-    print(a)
-
-    print('-'*80)
-
-    print('delta x and a')
-    print(x.full_matrix() - a)
-
-    plt.plot(np.arange(len(err))[100:], err[100:])
-    plt.show()
+    args = ((100, 50), 10, 10)
+    obvious_test(*args)
