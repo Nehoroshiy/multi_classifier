@@ -118,6 +118,15 @@ def test_dot_product(shape, r, niter=10):
         left_full, right_full = left_element.full_matrix(), right_element.full_matrix()
         strict_check(left_element.dot(right_element), left_full.dot(right_full))
         strict_check(left_element.dot(right_full), left_full.dot(right_full))
+        strict_check(right_element.rdot(left_element), left_full.dot(right_full))
+        strict_check(right_element.rdot(left_full), left_full.dot(right_full))
+
+
+def test_transpose(shape, r, niter=10):
+    for _ in range(niter):
+        elem = ManifoldElement.rand(shape, r)
+        strict_check(elem.transpose(), elem.full_matrix().T)
+        strict_check(elem.T, elem.full_matrix().T)
 
 
 if __name__ == '__main__':
@@ -126,5 +135,5 @@ if __name__ == '__main__':
     test_constructor(*args)
     test_binary_operations(*args)
     test_dot_product(*args)
-
+    test_transpose(*args)
 
