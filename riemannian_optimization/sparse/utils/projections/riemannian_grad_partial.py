@@ -30,7 +30,7 @@ from ..loss_functions import delta_on_sigma_set
 from riemannian_optimization.lowrank_matrix import ManifoldElement
 
 
-def riemannian_grad_partial(x, a, sigma_set, grad=None):
+def riemannian_grad_partial(x, a, sigma_set, grad=None, as_manifold_elements=False):
     """
     Riemannian gradient as a parts from which one can restore it
 
@@ -59,13 +59,16 @@ def riemannian_grad_partial(x, a, sigma_set, grad=None):
     out : tuple of ManifoldElements of shapes (M, N)
         matrices M, U_p and V_p^* as partial riemannian gradient
     """
-    grad = ManifoldElement(delta_on_sigma_set(x, a, sigma_set)) if grad is None else grad
+    grad = delta_on_sigma_set(x, a, sigma_set) if grad is None else grad
     left_projected = grad.T.dot(x.u)
     right_projected = grad.dot(x.v.T)
-    mid_proj = right_projected.rdot(x.u.T)
-    u_proj = right_projected - mid_proj.rdot(x.u)
-    v_proj = left_projected - mid_proj.T.rdot(x.v.T)
-    return mid_proj, u_proj, v_proj
+    mid = x.u.T.dot(right_projected)
+    u = right_projected - x.u.dot(mid)
+    v = left_projected - x.v.T.dot(mid.T)
+    if as_manifold_elements:
+        return ManifoldElement(mid, x.r), ManifoldElement(u, x.r), ManifoldElement(v.T, x.r)
+    else:
+        return mid, u, v.T
 
 
 def restore_full_from_partial(x, partial):
