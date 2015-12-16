@@ -28,7 +28,13 @@ THE SOFTWARE.
 
 import numpy as np
 import scipy as sp
+
+from scipy import sparse
 from lowrank_matrix import ManifoldElement
+
+from scipy.sparse import csr_matrix, coo_matrix
+
+from riemannian_optimization.utils.test_utils import generate_sigma_set
 
 
 def strict_check(manifold_element, original_matrix):
@@ -129,11 +135,23 @@ def test_transpose(shape, r, niter=10):
         strict_check(elem.T, elem.full_matrix().T)
 
 
+def test_evaluation(shape, r, niter=10):
+    for _ in range(niter):
+        elem = ManifoldElement.rand(shape, r)
+        full = csr_matrix(elem.full_matrix())
+        for percent in np.linspace(0.01, 1., 10):
+            sigma = generate_sigma_set(shape, percent)
+            temp = csr_matrix(coo_matrix((np.array(full[sigma]).ravel(), sigma), shape=shape))
+            assert(np.allclose(temp.todense(), elem.evaluate(sigma).todense()))
+
+
 if __name__ == '__main__':
     # shape, r, niter
-    args = ((100, 50), 10, 10)
+    args = ((200, 100), 10, 10)
     test_constructor(*args)
     test_binary_operations(*args)
     test_dot_product(*args)
     test_transpose(*args)
+    test_evaluation(*args)
+
 
