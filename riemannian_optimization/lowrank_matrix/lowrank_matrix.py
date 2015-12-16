@@ -306,6 +306,13 @@ class ManifoldElement(object):
         else:
             raise NotImplementedError('rmul operator is not implemented, except for scalars')
 
+    def transpose(self):
+        return ManifoldElement((self.v.T, self.s, self.u.T))
+
+    @property
+    def T(self):
+        return self.transpose()
+
     def dot(self, other):
         """
         Matrix product.
