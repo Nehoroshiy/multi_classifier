@@ -26,7 +26,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
+from riemannian_optimization.lowrank_matrix import ManifoldElement
 
+
+#TODO accept also simple matrices
 def vector_transport_base(x_base, x, partial):
     """
     Calculates vector transport of a tangent vector's partial representation
@@ -47,13 +50,13 @@ def vector_transport_base(x_base, x, partial):
         partial representation of a transported vector v at point x_base
     """
     mid_base, u_base, v_base = partial
-    a_v, a_u = x_base.v.dot(x.v.T), x_base.u.T.dot(x.u)
+    a_v, a_u = ManifoldElement(x_base.v.dot(x.v.T), x.r), ManifoldElement(x_base.u.T.dot(x.u), x.r)
     b_v, b_u = v_base.dot(x.v.T), u_base.T.dot(x.u)
     mid_1, u_1, v_1 = mid_base.rdot(a_u.T).dot(a_v),\
                       mid_base.dot(a_v).rdot(x_base.u),\
                       mid_base.T.dot(a_u).rdot(x_base.v.T)
-    mid_2, u_2, v_2 = b_u.T.dot(a_v), u_base.dot(a_v), x_base.v.T.dot(b_u)
-    mid_3, u_3, v_3 = a_u.T.dot(b_v), x_base.u.dot(b_v), v_base.T.dot(a_u)
+    mid_2, u_2, v_2 = b_u.T.dot(a_v), u_base.dot(a_v), b_u.rdot(x_base.v.T)
+    mid_3, u_3, v_3 = a_u.T.dot(b_v), b_v.rdot(x_base.u), v_base.T.dot(a_u)
     mid = mid_1 + mid_2 + mid_3
     u = u_1 + u_2 + u_3
     u = u - u.rdot(x.u.T).rdot(x.u)
