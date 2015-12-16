@@ -308,7 +308,8 @@ class ManifoldElement(object):
 
     def dot(self, other):
         """
-        Matrix product. Supports np.ndarray or ManifoldElement right side
+        Matrix product.
+        Supports np.ndarray, sp.sparse.spmatrix or ManifoldElement left side.
 
         Parameters
         ----------
@@ -333,6 +334,34 @@ class ManifoldElement(object):
             return ManifoldElement((self.u, self.s, self.v.dot(other)))
         elif sp.sparse.issparse(other):
             return ManifoldElement((self.u, self.s, csc_matrix(other).__rmul__(self.v)))
+        else:
+            raise ValueError("argument is not supported")
+
+    def rdot(self, other):
+        """
+        Matrix product where self is right-sided.
+        Supports np.ndarray, sp.sparse.spmatrix or ManifoldElement left side.
+
+        Parameters
+        ----------
+        other : sp.sparse.spmatrix, np.ndarray or ManifoldElement
+            matrix to perform matrix product
+
+        Returns
+        -------
+        prod : ManifoldElement
+            matrix product
+        """
+        if self.shape[0] != other.shape[1]:
+            raise ValueError("shapes must match!")
+        if type(other) is ManifoldElement:
+            return other.dot(self)
+        elif type(other) is np.ndarray:
+            return ManifoldElement((other.dot(self.u), self.s, self.v))
+        elif sp.sparse.issparse(other):
+            return ManifoldElement((csr_matrix(other).dot(self.u), self.s, self.v))
+        else:
+            raise ValueError("argument is not supported")
 
     def full_matrix(self):
         """
