@@ -26,99 +26,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-import numpy as np
 import scipy as sp
-
-from scipy import sparse, linalg, optimize
-
-from scipy.linalg import rq
-from numpy.linalg import svd, qr, norm
+from scipy.sparse import linalg
 from scipy.optimize import minimize_scalar
-from scipy.sparse import csr_matrix, csc_matrix, coo_matrix, linalg
 
-from riemannian_optimization.utils.approx_utils import csvd
+from ..utils.projections import riemannian_grad_full
+from ..utils.loss_functions import delta_on_sigma_set
+from ..utils.retractions import svd_retraction as retraction
+
 from riemannian_optimization.lowrank_matrix import ManifoldElement
-
-
-def euclid_grad(x, a, sigma_set):
-    """
-    Euclidean gradient.
-
-    Compute euclidean gradient of function $\dfrac{1}{2}| P_{\Sigma}(X - A)|_F^2$,
-    equals to P_{\Sigma}(X - A).
-
-    Parameters
-    ----------
-    x : ManifoldElement, shape (M, N)
-        Rank-r manifold element in which we compute gradient
-    a : sparse matrix, shape (M, N)
-        Matrix that we need to approximate -- it has nonzero entries only
-        on sigma_set
-    sigma_set : array_like
-        set of indices in which matrix a can be evaluated
-
-    Returns
-    -------
-    grad: sparse matrix, shape (M, N)
-        Gradient of our functional at x
-    """
-    if x.shape != a.shape:
-        raise ValueError("shapes of x and a must be equal")
-    return x.evaluate(sigma_set) - a
-
-
-def riemannian_grad(x, a, sigma_set, grad=None):
-    """
-    Riemannian gradient
-
-    Compute projection of Euclidean gradient of function
-    $\dfrac{1}{2}| P_{\Sigma}(X - A)|_F^2$ at tangent space to manifold at x.
-
-    Projection has the form
-    $Proj(Z) = UU^*Z + ZVV^* + UU^*ZVV^*$
-
-    Parameters
-    ----------
-    x : ManifoldElement, shape (M, N)
-        Rank-r manifold element in which we compute gradient
-    a : sparse matrix, shape (M, N)
-        Matrix that we need to approximate -- it has nonzero entries only
-        on sigma_set
-    sigma_set : array_like
-        set of indices in which matrix a can be evaluated
-    grad : sparse matrix, shape (M, N), optional
-        gradient given for being projected
-
-    Returns
-    -------
-    out : ManifoldElement
-        Projection of an Euclidean gradient onto the Tangent space at x
-    """
-    grad = ManifoldElement(euclid_grad(x, a, sigma_set)) if grad is None else grad
-    left_projected = grad.rdot(x.u.T).rdot(x.u)
-    right_projected = grad.dot(x.v.T).dot(x.v)
-    return left_projected + right_projected + left_projected.dot(x.v.T).dot(x.v)
-
-
-def retract(x, r):
-    """
-    Returns given tangent space element back to rank-r manifold.
-
-    In current version, retraction is proceeded by truncated SVD decomposition
-
-    Parameters
-    ----------
-    x : ManifoldElement, shape (M, N)
-        element to perform retraction
-    r : int
-        rank of manifold
-
-    Returns
-    -------
-    out : ManifoldElement, shape (M, N)
-        element of rank-r manifold, retraction of x onto it
-    """
-    return ManifoldElement(x, r)
 
 
 def gd_approximate(a, sigma_set, r, maxiter=900, eps=1e-9):
@@ -157,13 +73,13 @@ def gd_approximate(a, sigma_set, r, maxiter=900, eps=1e-9):
     x = ManifoldElement.rand(a.shape, r)
     err = []
     for it in range(maxiter):
-        grad = euclid_grad(x, a, sigma_set)
+        grad = delta_on_sigma_set(x, a, sigma_set)
         err.append(sp.sparse.linalg.norm(grad))
         if err[-1] < eps:
             print('Small grad norm {} is reached at iteration {}'.format(err[-1], it))
             return x, it, err
-        projection = ManifoldElement(-riemannian_grad(x, a, sigma_set, grad=grad))
+        projection = ManifoldElement(-riemannian_grad_full(x, a, sigma_set, grad=grad))
         alpha = minimize_scalar(fun=cost_func, bounds=(0., 10.), method='bounded')['x']
-        x = retract(x + alpha * projection, r)
+        x = retraction(x + alpha * projection, r)
     print('Error {} is reached at iteration {}. Cannot converge'.format(err[-1], maxiter))
     return x, maxiter, err
