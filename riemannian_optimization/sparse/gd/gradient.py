@@ -26,6 +26,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
+import numpy as np
 import scipy as sp
 from scipy.sparse import linalg
 from scipy.optimize import minimize_scalar
@@ -70,7 +71,9 @@ def gd_approximate(a, sigma_set, r, maxiter=900, eps=1e-9):
         temp = x + param * projection
         return 0.5 * sp.sparse.linalg.norm(temp.evaluate(sigma_set) - a) ** 2
 
-    x = ManifoldElement.rand(a.shape, r)
+    density = 1.0 * len(sigma_set[0]) / np.prod(a.shape)
+    x = ManifoldElement.rand(a.shape, r,
+                             desired_norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
     err = []
     for it in range(maxiter):
         grad = delta_on_sigma_set(x, a, sigma_set)
@@ -78,8 +81,9 @@ def gd_approximate(a, sigma_set, r, maxiter=900, eps=1e-9):
         if err[-1] < eps:
             print('Small grad norm {} is reached at iteration {}'.format(err[-1], it))
             return x, it, err
-        projection = ManifoldElement(-riemannian_grad_full(x, a, sigma_set, grad=grad))
-        alpha = minimize_scalar(fun=cost_func, bounds=(0., 10.), method='bounded')['x']
+        projection = riemannian_grad_full(x, a, sigma_set, grad=-grad)
+        alpha = minimize_scalar(fun=cost_func, bounds=(0., 5.), method='bounded')['x']
+        print('iter:{}, alpha: {}, error: {}'.format(it, alpha, err[-1]))
         x = retraction(x + alpha * projection, r)
     print('Error {} is reached at iteration {}. Cannot converge'.format(err[-1], maxiter))
     return x, maxiter, err
