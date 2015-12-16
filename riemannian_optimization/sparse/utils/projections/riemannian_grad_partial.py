@@ -56,10 +56,34 @@ def riemannian_grad_partial(x, a, sigma_set, grad=None):
 
     Returns
     -------
-    out : tuple of ManifoldElements
+    out : tuple of ManifoldElements of shapes (M, N)
         matrices M, U_p and V_p^* as partial riemannian gradient
     """
     grad = ManifoldElement(delta_on_sigma_set(x, a, sigma_set)) if grad is None else grad
-    left_projected = grad.rdot(x.u.T).rdot(x.u)
-    right_projected = grad.dot(x.v.T).dot(x.v)
-    return left_projected + right_projected + left_projected.dot(x.v.T).dot(x.v)
+    left_projected = grad.T.dot(x.u)
+    right_projected = grad.dot(x.v.T)
+    mid_proj = right_projected.rdot(x.u.T)
+    u_proj = right_projected - mid_proj.rdot(x.u)
+    v_proj = left_projected - mid_proj.T.rdot(x.v.T)
+    return mid_proj, u_proj, v_proj
+
+
+def restore_full_from_partial(x, partial):
+    """
+    Restore full riemannian gradient from it's partial representation
+    at ManifoldElement x
+
+    Parameters
+    ----------
+    x : ManifoldElement, shape (M, N)
+        point at which partial gradient was computed
+    partial : tuple of ManifoldElements of shapes (M, N)
+        matrices M, U_p and V_p^* as partial riemannian gradient
+
+    Returns
+    -------
+    out : ManifoldElement
+        riemannian gradient at x
+    """
+    mid_proj, u_proj, v_proj = partial
+    return mid_proj.rdot(x.u).dot(x.v) + u_proj.dot(x.v) + v_proj.rdot(x.u)
