@@ -58,6 +58,13 @@ def riemannian_grad_full(x, a, sigma_set, grad=None):
         Projection of an Euclidean gradient onto the Tangent space at x
     """
     grad = ManifoldElement(delta_on_sigma_set(x, a, sigma_set)) if grad is None else grad
-    left_projected = grad.rdot(x.u.T).rdot(x.u)
-    right_projected = grad.dot(x.v.T).dot(x.v)
-    return left_projected + right_projected + left_projected.dot(x.v.T).dot(x.v)
+    left_projected = grad.T.dot(x.u)
+    right_projected = grad.dot(x.v.T)
+    mid = x.u.T.dot(right_projected)
+    u = right_projected - x.u.dot(mid)
+    v = left_projected - x.v.T.dot(mid.T)
+
+    mid = ManifoldElement(mid, x.r).rdot(x.u).dot(x.v)
+    u = ManifoldElement(u, x.r).dot(x.v)
+    v = ManifoldElement(v.T, x.r).rdot(x.u)
+    return mid + u + v
