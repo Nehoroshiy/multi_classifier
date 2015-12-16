@@ -31,13 +31,15 @@ import scipy as sp
 
 from scipy import linalg, sparse
 
-from scipy.sparse import coo_matrix, csr_matrix, csc_matrix
+from scipy.sparse import coo_matrix, csr_matrix, csc_matrix, lil_matrix
 
 from riemannian_optimization.utils.approx_utils import csvd
 
 
-def orth(a):
-    return np.allclose(a.T.dot(a), np.eye(a.shape[1]))
+def orth(a, eps=1e-12):
+    return np.linalg.norm(a.T.dot(a) - np.eye(a.shape[1])) < eps * np.sqrt(a.shape[1])
+
+#return np.allclose(a.T.dot(a), np.eye(a.shape[1]))
 
 
 def torth(a):
@@ -239,10 +241,10 @@ class ManifoldElement(object):
         return left_balanced and right_balanced and sigma_sorted
 
     def __add__(self, other):
-        if type(other) == np.ndarray:
+        if type(other) is np.ndarray:
             other = ManifoldElement(other, self.r)
             return self.__add__(other)
-        elif type(other) == ManifoldElement:
+        elif type(other) is ManifoldElement:
             u = np.hstack((self.u, other.u))
             s = np.concatenate((self.s, other.s))
             v = np.vstack((self.v, other.v))
@@ -266,10 +268,10 @@ class ManifoldElement(object):
         return self.__add__(other)
 
     def __sub__(self, other):
-        if type(other) == np.ndarray:
+        if type(other) is np.ndarray:
             other = ManifoldElement(other, self.r)
             return self.__sub__(other)
-        elif type(other) == ManifoldElement:
+        elif type(other) is ManifoldElement:
             return self + (-other)
         else:
             raise ValueError(
@@ -405,10 +407,45 @@ class ManifoldElement(object):
         out : csr_matrix
             full matrix evaluated at sigma_set
         """
-        res = coo_matrix(shape=self.shape)
-        for (i, j) in sigma_set:
-            res[i, j] = np.dot(self.u[i, :] * self.s, self.v[:, j])
-        return csr_matrix(res)
+        idx_argsort = sigma_set[0].argsort()
+        sigma_set[1][:] = sigma_set[1][idx_argsort]
+        sigma_set[0][:] = sigma_set[0][idx_argsort]
+        data = np.zeros(len(sigma_set[0]))
+        for (val, idx, count) in zip(*np.unique(sigma_set[0],
+                                               return_index=True,
+                                               return_counts=True)):
+            data[idx:idx + count] = np.dot(self.u[val, :] * self.s,
+                                           self.v[:, sigma_set[1][idx: idx + count]])
+        return csr_matrix(coo_matrix((data, tuple(sigma_set)), shape=self.shape))
+
+        #res = lil_matrix(self.shape)
+        #for (i, j) in zip(*sigma_set):
+        #    res[i, j] = np.dot(self.u[i, :] * self.s, self.v[:, j])
+        #return csr_matrix(res)
+
+    def isclose(self, other, tol=1e-9):
+        """
+        Check if element is close to another in frobenius norm.
+
+        Parameters
+        ----------
+        other : ManifoldElement
+            element to check closeness
+        tol : float
+            tolerance for closeness
+
+        Returns
+        -------
+        status: bool
+            flag indicates that to elements are close or not
+        """
+        if type(other) is not ManifoldElement:
+            raise ValueError("we can measure closeness only between ManifoldElements")
+        largest_norm = max(self.frobenius_norm(), other.frobenius_norm())
+        if largest_norm == 0:
+            return True
+        else:
+            return (self - other).frobenius_norm() / largest_norm < tol
 
     @staticmethod
     def rand(shape, r, desired_norm=None):
