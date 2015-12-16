@@ -37,6 +37,7 @@ from riemannian_optimization.utils.test_utils import generate_sigma_set
 
 np.set_printoptions(linewidth=450, suppress=True)
 
+import cProfile
 
 if __name__ == "__main__":
     shape = (10, 10)
@@ -48,7 +49,11 @@ if __name__ == "__main__":
     for (i, j) in zip(*sigma_set):
         a_sparse[i, j] = a_full[i, j]
     a_sparse = csr_matrix(a_sparse)
-    x, it, err = gd_approximate(a_sparse, sigma_set, r)
+    x, it, err = gd_approximate(a_sparse, sigma_set, r, maxiter=900)
+    #cProfile.run('x, it, err = gd_approximate(a_sparse, sigma_set, r, maxiter=200)')
+    """
+    x, it, err = gd_approximate(a_sparse, sigma_set, r, maxiter=5)
+
     print('norm of x - a: {}'.format(np.linalg.norm(x.full_matrix() - a_full)))
 
     print('full matrix x:')
@@ -66,3 +71,4 @@ if __name__ == "__main__":
 
     plt.plot(np.arange(len(err))[100:], err[100:])
     plt.show()
+    """
