@@ -74,6 +74,9 @@ def riemannian_grad(x, a, sigma_set, grad=None):
     Compute projection of Euclidean gradient of function
     $\dfrac{1}{2}| P_{\Sigma}(X - A)|_F^2$ at tangent space to manifold at x.
 
+    Projection has the form
+    $Proj(Z) = UU^*Z + ZVV^* + UU^*ZVV^*$
+
     Parameters
     ----------
     x : ManifoldElement, shape (M, N)
@@ -83,9 +86,36 @@ def riemannian_grad(x, a, sigma_set, grad=None):
         on sigma_set
     sigma_set : array_like
         set of indices in which matrix a can be evaluated
-    grad
+    grad : sparse matrix, shape (M, N), optional
+        gradient given for being projected
 
     Returns
     -------
-
+    out : ManifoldElement
+        Projection of an Euclidean gradient onto the Tangent space at x
     """
+    grad = ManifoldElement(euclid_grad(x, a, sigma_set)) if grad is None else grad
+    left_projected = grad.rdot(x.u.T).rdot(x.u)
+    right_projected = grad.dot(x.v.T).dot(x.v)
+    return left_projected + right_projected + left_projected.dot(x.v.T).dot(x.v)
+
+
+def retract(x, r):
+    """
+    Returns given tangent space element back to rank-r manifold.
+
+    In current version, retraction is proceeded by truncated SVD decomposition
+
+    Parameters
+    ----------
+    x : ManifoldElement, shape (M, N)
+        element to perform retraction
+    r : int
+        rank of manifold
+
+    Returns
+    -------
+    out : ManifoldElement, shape (M, N)
+        element of rank-r manifold, retraction of x onto it
+    """
+    return ManifoldElement(x, r)
