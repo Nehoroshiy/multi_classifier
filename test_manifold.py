@@ -67,7 +67,7 @@ if __name__ == "__main__":
     sigma_set = part(all_indices(m, n), percent)
     print(sigma_set[0].size)
     r = 2
-    it, x, err = approximate(a, sigma_set, r)
+    x, it, err = approximate(a, sigma_set, r)
     print('norm of x - a: {}'.format(norm(x.full_matrix() - a)))
 
     print('full matrix x:')

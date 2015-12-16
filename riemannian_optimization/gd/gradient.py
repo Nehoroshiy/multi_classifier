@@ -104,7 +104,7 @@ def approximate(a, sigma_set, r, maxiter=900, eps=1e-9, func=None):
         # print(x.full_matrix() - a)
         if np.linalg.norm(grad) < eps:
             print('Small grad norm {} is reached at iteration {}'.format(np.linalg.norm(grad), it))
-            return it, x, err
+            return x, it, err
         proj = ManifoldElement(-riemannian_grad(x, a, sigma_set))
 
         # print('Projection of gradient at iteration {}'.format(it))
@@ -140,5 +140,5 @@ def approximate(a, sigma_set, r, maxiter=900, eps=1e-9, func=None):
         #    return it, x_next
         x = x_next
 
-    print('Error {} is reached at iteration {}. Cannot converge'.format(fxn, it))
-    return it, x_next, err
+    print('Error {} is reached at iteration {}. Cannot converge'.format(fxn, maxiter))
+    return x_next, maxiter, err
