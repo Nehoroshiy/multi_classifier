@@ -27,6 +27,9 @@ THE SOFTWARE.
 """
 
 import numpy as np
+import scipy as sp
+
+from scipy import sparse
 
 
 def all_indices(m, n):
@@ -40,5 +43,9 @@ def part(indices, percent):
     return list(map(lambda x: x[perm][:int(indices[0].size * percent)], indices))
 
 
+#def generate_sigma_set(shape, percent):
+#    return part(all_indices(*shape), percent)
+
+
 def generate_sigma_set(shape, percent):
-    return part(all_indices(*shape), percent)
+    return sp.sparse.random(*shape, density=percent).nonzero()
