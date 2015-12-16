@@ -34,7 +34,7 @@ from scipy import sparse, linalg, optimize
 from scipy.linalg import rq
 from numpy.linalg import svd, qr, norm
 from scipy.optimize import minimize_scalar
-from scipy.sparse import csr_matrix, csc_matrix, coo_matrix
+from scipy.sparse import csr_matrix, csc_matrix, coo_matrix, linalg
 
 from riemannian_optimization.utils.approx_utils import csvd
 from riemannian_optimization.lowrank_matrix import ManifoldElement
@@ -119,3 +119,51 @@ def retract(x, r):
         element of rank-r manifold, retraction of x onto it
     """
     return ManifoldElement(x, r)
+
+
+def gd_approximate(a, sigma_set, r, maxiter=900, eps=1e-9):
+    """
+    Approximation of sparse matrix a with gradient descend method.
+    Matrix a is known only at sigma_set indices, at other indices it equals zero.
+    Function use Riemannian Gradient Descend with line search to find approximation.
+
+    Parameters
+    ----------
+    a : sp.sparse.spmatrix, shape (M, N)
+        Matrix being approximated
+    sigma_set : np.array_like
+        set of i-indices and j-indices
+    r : int
+        rank constraint
+    maxiter : int, optional
+        maximum number of iteration
+    eps : float, optional
+        tolerance for gradient norm checking
+
+    Returns
+    -------
+    out : ManifoldElement, shape (M, N)
+        Approximation found by algorithm
+    iter: int
+        Number of iterations spent by algorithms to reach approximation.
+        If equals maxiter, then algorithm not converged
+    err: list
+        List of grad norms at each iteration
+    """
+    def cost_func(param):
+        temp = x + param * projection
+        return 0.5 * sp.sparse.linalg.norm(temp.evaluate(sigma_set) - a) ** 2
+
+    x = ManifoldElement.rand(a.shape, r)
+    err = []
+    for it in range(maxiter):
+        grad = euclid_grad(x, a, sigma_set)
+        err.append(sp.sparse.linalg.norm(grad))
+        if err[-1] < eps:
+            print('Small grad norm {} is reached at iteration {}'.format(err[-1], it))
+            return x, it, err
+        projection = ManifoldElement(-riemannian_grad(x, a, sigma_set, grad=grad))
+        alpha = minimize_scalar(fun=cost_func, bounds=(0., 10.), method='bounded')['x']
+        x = retract(x + alpha * projection, r)
+    print('Error {} is reached at iteration {}. Cannot converge'.format(err[-1], maxiter))
+    return x, maxiter, err
