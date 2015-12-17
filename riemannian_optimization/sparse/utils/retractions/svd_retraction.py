@@ -27,6 +27,7 @@ THE SOFTWARE.
 """
 
 from riemannian_optimization.lowrank_matrix import ManifoldElement
+from riemannian_optimization.sparse.utils.projections import TangentVector
 
 
 def svd_retraction(x, r):
@@ -47,4 +48,9 @@ def svd_retraction(x, r):
     out : ManifoldElement, shape (M, N)
         element of rank-r manifold, retraction of x onto it
     """
-    return ManifoldElement(x, r)
+    if isinstance(x, ManifoldElement):
+        return ManifoldElement(x, r)
+    elif isinstance(x, TangentVector):
+        return ManifoldElement(x.release(), r)
+    else:
+        raise ValueError("Supports only ManifoldElement or TangentVector classes")
