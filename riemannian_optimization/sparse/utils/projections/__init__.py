@@ -26,5 +26,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
+from tangent_vector import TangentVector
 from riemannian_grad_full import riemannian_grad_full
 from riemannian_grad_partial import riemannian_grad_partial, restore_full_from_partial
