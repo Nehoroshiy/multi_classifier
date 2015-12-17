@@ -30,6 +30,7 @@ import numpy as np
 
 from riemannian_optimization.lowrank_matrix import ManifoldElement
 from ..vector_transport import vector_transport_base
+from riemannian_grad_partial import restore_full_from_partial
 
 
 class TangentVector():
@@ -47,7 +48,7 @@ class TangentVector():
                 raise ValueError("data must contains 3 ManifoldElements")
             self.m, self.u, self.v = data
             if self.m.shape[0] != self.m.shape[1]\
-                    or self.m.shape[0] != self.u.shape[0]\
+                    or self.m.shape[0] != self.u.shape[1]\
                     or self.m.shape[1] != self.v.shape[0]:
                 raise ValueError("M, U_p and V_p must be rank-r matrices")
 
@@ -87,3 +88,13 @@ class TangentVector():
 
     def transport(self, base):
         return TangentVector(base, vector_transport_base(self.base, base, (self.m, self.u, self.v)))
+
+    def release(self):
+        return restore_full_from_partial(self.base, (self.m, self.u, self.v))
+
+    @staticmethod
+    def zero(base):
+        shape, r = base.shape, base.r
+        return TangentVector(base, (ManifoldElement(np.zeros((r, r)), r),
+                                    ManifoldElement(np.zeros((shape[0], r)), r),
+                                    ManifoldElement(np.zeros((r, shape[1])), r)))
