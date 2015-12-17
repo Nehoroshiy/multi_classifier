@@ -39,3 +39,10 @@ from scipy.sparse import csr_matrix, csc_matrix, coo_matrix, linalg
 from riemannian_optimization.utils.approx_utils import csvd
 from riemannian_optimization.lowrank_matrix import ManifoldElement
 
+
+def conjugate_direction(x_prev, grad_prev, dir_prev, x, grad):
+    grad_prev_trans = grad_prev.transport(x)
+    dir_prev_trans = dir_prev.transport(x)
+
+    delta = grad - grad_prev_trans
+    beta = max(0, )
