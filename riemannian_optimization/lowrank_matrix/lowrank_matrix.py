@@ -458,7 +458,7 @@ class ManifoldElement(object):
         status: bool
             flag indicates that to elements are close or not
         """
-        if isinstance(other, ManifoldElement):
+        if not isinstance(other, ManifoldElement):
             raise ValueError("we can measure closeness only between ManifoldElements")
         largest_norm = max(self.frobenius_norm(), other.frobenius_norm())
         if largest_norm == 0:
