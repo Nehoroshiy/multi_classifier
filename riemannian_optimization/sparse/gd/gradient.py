@@ -145,7 +145,7 @@ def old_momentum_approximate(a, sigma_set, r, maxiter=900, mu=0.9, learn_rate=0.
     return x, maxiter, err
 
 
-def momentum_approximate(a, sigma_set, r, maxiter=900, mu=0.85, learn_rate=0.15, eps=1e-9):
+def momentum_approximate(a, sigma_set, r, x0=None, maxiter=900, mu=0.85, learn_rate=0.15, eps=1e-9):
     """
     Approximation of sparse matrix a with gradient descend method with momentum update.
     Matrix a is known only at sigma_set indices, at other indices it equals zero.
@@ -179,8 +179,11 @@ def momentum_approximate(a, sigma_set, r, maxiter=900, mu=0.85, learn_rate=0.15,
         return 0.5 * sp.sparse.linalg.norm(temp.evaluate(sigma_set) - a) ** 2
 
     density = 1.0 * len(sigma_set[0]) / np.prod(a.shape)
-    x = ManifoldElement.rand(a.shape, r,
-                             desired_norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
+    if x0 is None:
+        x = ManifoldElement.rand(a.shape, r,
+                                 desired_norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
+    else:
+        x = x0
     err = []
     v = TangentVector.zero(x)
     for it in range(maxiter):
