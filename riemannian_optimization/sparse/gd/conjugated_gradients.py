@@ -44,10 +44,15 @@ def conjugate_direction(x_prev, grad_prev, dir_prev, x, grad):
     dir_prev_trans = dir_prev.transport(x)
 
     delta = grad - grad_prev_trans
-    beta = max(0, delta.release().scalar_product(grad.release()) / grad_prev_trans.release().frobenius_norm()**2)
+    delta_released = delta.release()
+    grad_prev_released = grad_prev_trans.release()
+    grad_released = grad.release()
+    beta = max(0, delta_released.scalar_product(grad_released) / grad_prev_released.frobenius_norm()**2)
     dir_ = -grad + beta * dir_prev_trans
+    dir_released = dir_.release()
 
-    angle = grad.release().scalar_product(dir_.release()) / np.sqrt(dir_.release().frobenius_norm()**2 * grad.release().frobenius_norm()**2)
+    angle = grad_released.scalar_product(dir_released) / \
+            np.sqrt(dir_released.frobenius_norm()**2 * grad_released.frobenius_norm()**2)
     if angle <= 0.1:
         dir_ = grad
     return dir_
@@ -61,6 +66,48 @@ def closed_form_initial_guess(vec, delta, sigma_set):
 
 
 def cg(a, sigma_set, r, maxiter=900, eps=1e-9):
+    def cost_function(param):
+        temp = x + param * conj_released
+        return 0.5 * sp.sparse.linalg.norm(temp.evaluate(sigma_set) - a) ** 2
+
+    def cost_raw(elem):
+        return 0.5 * sp.sparse.linalg.norm(elem.evaluate(sigma_set) - a) ** 2
+
+    x = ManifoldElement.rand(a.shape, r)
+    x_prev = x
+    error_history = []
+    conj, conj_prev = TangentVector.zero(x), TangentVector.zero(x)
+    conj_released, conj_prev_released = conj.release(), conj_prev.release()
+    grad = -TangentVector(x, riemannian_grad_partial(x, a, sigma_set,
+                                                     as_manifold_elements=True))
+    grad_released = grad.release()
+    for it in range(maxiter):
+        delta = delta_on_sigma_set(x, a, sigma_set)
+        grad_prev, grad = \
+            grad, -TangentVector(x, riemannian_grad_partial(x, a, sigma_set, grad=delta,
+                                                            as_manifold_elements=True))
+        grad_prev_released, grad_released = grad_released, grad.release()
+        error_history.append(grad_released.frobenius_norm())
+        if error_history[-1] < eps:
+            print('Small grad norm {} is reached at iteration {}'.format(error_history[-1], it))
+            return x, it, error_history
+        conj_prev, conj = conj, conjugate_direction(x_prev, grad_prev, conj_prev, x, grad)
+        conj_prev_released, conj_released = conj_released, conj.release()
+        alpha = minimize_scalar(fun=cost_function, bounds=(0., 10.), method='bounded')['x']
+        m = 0
+        for i in range(20):
+            x_new = svd_retraction(x + (0.5**m * alpha) * conj_released, r)
+            if cost_raw(x) - cost_raw(x_new) >= \
+                    (-0.0001 * 0.5**m * alpha) * grad_released.scalar_product(conj_released):
+                m = i
+                break
+        print('iter:{}, alpha: {}, m: {} error: {}'.format(it, alpha, m, error_history[-1]))
+        x_prev, x = x, x_new
+    print('Error {} is reached at iteration {}. Cannot converge'.format(error_history[-1], maxiter))
+    return x, maxiter, error_history
+
+
+def old_cg(a, sigma_set, r, maxiter=900, eps=1e-9):
     def cost_function(param):
         temp = x + param * conj_dir.release()
         return 0.5 * sp.sparse.linalg.norm(temp.evaluate(sigma_set) - a) ** 2
