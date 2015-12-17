@@ -145,13 +145,36 @@ def test_evaluation(shape, r, niter=10):
             assert(np.allclose(temp.todense(), elem.evaluate(sigma).todense()))
 
 
+def test_trace(shape, r, niter=10):
+    for _ in range(niter):
+        elem = ManifoldElement.rand(shape, r, desired_norm=100*np.random.random() + 10)
+        full = elem.full_matrix()
+        assert(np.isclose(elem.trace(), np.trace(full)))
+
+
+def test_scalar_product(shape, r, niter=10):
+    for _ in range(niter):
+        left = ManifoldElement.rand(shape, r, desired_norm=100*np.random.random() + 10)
+        right = ManifoldElement.rand(shape, r, desired_norm=100*np.random.random() + 10)
+        left_full = left.full_matrix()
+        right_full = right.full_matrix()
+        assert(np.isclose(left.scalar_product(right), np.trace(left_full.dot(right_full.T))))
+
+
 if __name__ == '__main__':
     # shape, r, niter
     args = ((200, 100), 10, 10)
+
     test_constructor(*args)
     test_binary_operations(*args)
     test_dot_product(*args)
     test_transpose(*args)
     test_evaluation(*args)
+    test_scalar_product(*args)
+
+    # equally-shaped test
+    sym_args = ((200, 200), 10, 10)
+
+    test_trace(*sym_args)
 
 
