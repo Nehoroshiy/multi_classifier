@@ -44,7 +44,7 @@ if __name__ == "__main__":
     percent = 0.8
     sigma_set = generate_sigma_set(shape, percent)
     r = 2
-    a_full = 10*np.arange(shape[0])[:, None] + np.arange(shape[1])
+    a_full = shape[1]*np.arange(shape[0])[:, None] + np.arange(shape[1])
     a_sparse = lil_matrix(shape)
     for (i, j) in zip(*sigma_set):
         a_sparse[i, j] = a_full[i, j]
