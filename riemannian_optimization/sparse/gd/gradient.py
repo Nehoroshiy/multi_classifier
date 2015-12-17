@@ -31,7 +31,7 @@ import scipy as sp
 from scipy.sparse import linalg
 from scipy.optimize import minimize_scalar
 
-from ..utils.projections import riemannian_grad_full
+from ..utils.projections import riemannian_grad_full, riemannian_grad_partial
 from ..utils.loss_functions import delta_on_sigma_set
 from ..utils.retractions import svd_retraction as retraction
 
@@ -82,8 +82,119 @@ def gd_approximate(a, sigma_set, r, maxiter=900, eps=1e-9):
             print('Small grad norm {} is reached at iteration {}'.format(err[-1], it))
             return x, it, err
         projection = riemannian_grad_full(x, a, sigma_set, grad=-grad)
-        alpha = minimize_scalar(fun=cost_func, bounds=(0., 5.), method='bounded')['x']
+        alpha = minimize_scalar(fun=cost_func, bounds=(0., 10.), method='bounded')['x']
         print('iter:{}, alpha: {}, error: {}'.format(it, alpha, err[-1]))
         x = retraction(x + alpha * projection, r)
+    print('Error {} is reached at iteration {}. Cannot converge'.format(err[-1], maxiter))
+    return x, maxiter, err
+
+
+def momentum_approximate(a, sigma_set, r, maxiter=900, mu=0.9, learn_rate=0.9, eps=1e-9):
+    """
+    Approximation of sparse matrix a with gradient descend method.
+    Matrix a is known only at sigma_set indices, at other indices it equals zero.
+    Function use Riemannian Gradient Descend with line search to find approximation.
+
+    Parameters
+    ----------
+    a : sp.sparse.spmatrix, shape (M, N)
+        Matrix being approximated
+    sigma_set : np.array_like
+        set of i-indices and j-indices
+    r : int
+        rank constraint
+    maxiter : int, optional
+        maximum number of iteration
+    eps : float, optional
+        tolerance for gradient norm checking
+
+    Returns
+    -------
+    out : ManifoldElement, shape (M, N)
+        Approximation found by algorithm
+    iter: int
+        Number of iterations spent by algorithms to reach approximation.
+        If equals maxiter, then algorithm not converged
+    err: list
+        List of grad norms at each iteration
+    """
+    def cost_func(param):
+        temp = x + mu * v + param * projection
+        return 0.5 * sp.sparse.linalg.norm(temp.evaluate(sigma_set) - a) ** 2
+
+    density = 1.0 * len(sigma_set[0]) / np.prod(a.shape)
+    x = ManifoldElement.rand(a.shape, r,
+                             desired_norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
+    err = []
+    v = ManifoldElement.rand(a.shape, r)
+    v.s[:] = 0
+    for it in range(maxiter):
+        grad = delta_on_sigma_set(x, a, sigma_set)
+        err.append(sp.sparse.linalg.norm(grad))
+        if err[-1] < eps:
+            print('Small grad norm {} is reached at iteration {}'.format(err[-1], it))
+            return x, it, err
+        projection = riemannian_grad_full(x, a, sigma_set, grad=-grad)
+        proj = riemannian_grad_partial(x, a, sigma_set, grad=-grad, as_manifold_elements=True)
+        alpha = minimize_scalar(fun=cost_func, bounds=(0., 10.), method='bounded')['x']
+        v = mu * v + alpha * projection
+        print('iter:{}, alpha: {}, error: {}'.format(it, alpha, err[-1]))
+        x = retraction(x + v, r)
+        #x = retraction(x + alpha * projection, r)
+    print('Error {} is reached at iteration {}. Cannot converge'.format(err[-1], maxiter))
+    return x, maxiter, err
+
+
+def new_momentum_approximate(a, sigma_set, r, maxiter=900, mu=0.9, learn_rate=0.9, eps=1e-9):
+    """
+    Approximation of sparse matrix a with gradient descend method.
+    Matrix a is known only at sigma_set indices, at other indices it equals zero.
+    Function use Riemannian Gradient Descend with line search to find approximation.
+
+    Parameters
+    ----------
+    a : sp.sparse.spmatrix, shape (M, N)
+        Matrix being approximated
+    sigma_set : np.array_like
+        set of i-indices and j-indices
+    r : int
+        rank constraint
+    maxiter : int, optional
+        maximum number of iteration
+    eps : float, optional
+        tolerance for gradient norm checking
+
+    Returns
+    -------
+    out : ManifoldElement, shape (M, N)
+        Approximation found by algorithm
+    iter: int
+        Number of iterations spent by algorithms to reach approximation.
+        If equals maxiter, then algorithm not converged
+    err: list
+        List of grad norms at each iteration
+    """
+    def cost_func(param):
+        temp = x + mu * v + param * projection
+        return 0.5 * sp.sparse.linalg.norm(temp.evaluate(sigma_set) - a) ** 2
+
+    density = 1.0 * len(sigma_set[0]) / np.prod(a.shape)
+    x = ManifoldElement.rand(a.shape, r,
+                             desired_norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
+    err = []
+    v = ManifoldElement.rand(a.shape, r)
+    v.s[:] = 0
+    for it in range(maxiter):
+        grad = delta_on_sigma_set(x, a, sigma_set)
+        err.append(sp.sparse.linalg.norm(grad))
+        if err[-1] < eps:
+            print('Small grad norm {} is reached at iteration {}'.format(err[-1], it))
+            return x, it, err
+        projection = riemannian_grad_full(x, a, sigma_set, grad=-grad)
+        alpha = minimize_scalar(fun=cost_func, bounds=(0., 10.), method='bounded')['x']
+        v = mu * v + alpha * projection
+        print('iter:{}, alpha: {}, error: {}'.format(it, alpha, err[-1]))
+        x = retraction(x + v, r)
+        #x = retraction(x + alpha * projection, r)
     print('Error {} is reached at iteration {}. Cannot converge'.format(err[-1], maxiter))
     return x, maxiter, err
