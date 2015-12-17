@@ -32,7 +32,7 @@ from matplotlib import pyplot as plt
 
 from scipy.sparse import csr_matrix, lil_matrix
 
-from riemannian_optimization.sparse.gd import gd_approximate, momentum_approximate
+from riemannian_optimization.sparse.gd import gd_approximate, momentum_approximate, cg
 from riemannian_optimization.utils.test_utils import generate_sigma_set
 
 np.set_printoptions(linewidth=450, suppress=True)
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     for (i, j) in zip(*sigma_set):
         a_sparse[i, j] = a_full[i, j]
     a_sparse = csr_matrix(a_sparse)
-    x, it, err = momentum_approximate(a_sparse, sigma_set, r, maxiter=900)
+    x, it, err = cg(a_sparse, sigma_set, r, maxiter=900)
     #cProfile.run('x, it, err = gd_approximate(a_sparse, sigma_set, r, maxiter=200)')
     #x, it, err = gd_approximate(a_sparse, sigma_set, r, maxiter=5)
 
@@ -68,5 +68,5 @@ if __name__ == "__main__":
     print('delta x and a')
     print(x.full_matrix() - a_full)
 
-    plt.plot(np.arange(len(err))[100:], err[100:])
+    plt.plot(np.arange(len(err))[:], err[:])
     plt.show()
