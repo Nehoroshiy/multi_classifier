@@ -32,7 +32,7 @@ from matplotlib import pyplot as plt
 
 from scipy.sparse import csr_matrix, lil_matrix
 
-from riemannian_optimization.sparse.gd import gd_approximate
+from riemannian_optimization.sparse.gd import gd_approximate, momentum_approximate
 from riemannian_optimization.utils.test_utils import generate_sigma_set
 
 np.set_printoptions(linewidth=450, suppress=True)
@@ -41,7 +41,7 @@ import cProfile
 
 if __name__ == "__main__":
     shape = (10, 10)
-    percent = 0.9
+    percent = 0.8
     sigma_set = generate_sigma_set(shape, percent)
     r = 2
     a_full = 10*np.arange(shape[0])[:, None] + np.arange(shape[1])
@@ -49,10 +49,9 @@ if __name__ == "__main__":
     for (i, j) in zip(*sigma_set):
         a_sparse[i, j] = a_full[i, j]
     a_sparse = csr_matrix(a_sparse)
-    x, it, err = gd_approximate(a_sparse, sigma_set, r, maxiter=900)
+    x, it, err = momentum_approximate(a_sparse, sigma_set, r, maxiter=900)
     #cProfile.run('x, it, err = gd_approximate(a_sparse, sigma_set, r, maxiter=200)')
-    """
-    x, it, err = gd_approximate(a_sparse, sigma_set, r, maxiter=5)
+    #x, it, err = gd_approximate(a_sparse, sigma_set, r, maxiter=5)
 
     print('norm of x - a: {}'.format(np.linalg.norm(x.full_matrix() - a_full)))
 
@@ -71,4 +70,3 @@ if __name__ == "__main__":
 
     plt.plot(np.arange(len(err))[100:], err[100:])
     plt.show()
-    """
