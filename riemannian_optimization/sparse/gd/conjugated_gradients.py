@@ -45,4 +45,5 @@ def conjugate_direction(x_prev, grad_prev, dir_prev, x, grad):
     dir_prev_trans = dir_prev.transport(x)
 
     delta = grad - grad_prev_trans
-    beta = max(0, )
+    beta = max(0, delta.scalar_product(grad) / grad_prev_trans.frobenius_norm**2)
+    dir_ = -grad + beta * dir_prev_trans
