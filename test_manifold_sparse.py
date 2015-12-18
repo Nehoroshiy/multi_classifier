@@ -32,7 +32,7 @@ from matplotlib import pyplot as plt
 
 from scipy.sparse import csr_matrix, lil_matrix
 
-from riemannian_optimization.sparse.gd import gd_approximate, momentum_approximate, cg
+from riemannian_optimization.sparse.gd import gd_approximate, momentum_approximate, cg, old_cg
 from riemannian_optimization.utils.test_utils import generate_sigma_set
 
 np.set_printoptions(linewidth=450, suppress=True)
@@ -49,10 +49,15 @@ if __name__ == "__main__":
     for (i, j) in zip(*sigma_set):
         a_sparse[i, j] = a_full[i, j]
     a_sparse = csr_matrix(a_sparse)
-    x, it, err = cg(a_sparse, sigma_set, r, maxiter=900)
+    #test_batch_size = 20
+    #maxiter = 200
+    #its = np.array([old_cg(a_sparse, sigma_set, r, maxiter=maxiter)[1] for _ in range(test_batch_size)])
+    #print(its)
+    #print('fault rate: {}'.format(np.average(its == maxiter)))
     #cProfile.run('x, it, err = gd_approximate(a_sparse, sigma_set, r, maxiter=200)')
     #x, it, err = gd_approximate(a_sparse, sigma_set, r, maxiter=5)
 
+    x, it, err = cg(a_sparse, sigma_set, r, maxiter=900)
     print('norm of x - a: {}'.format(np.linalg.norm(x.full_matrix() - a_full)))
 
     print('full matrix x:')

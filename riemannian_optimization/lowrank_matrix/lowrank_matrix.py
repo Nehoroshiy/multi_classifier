@@ -497,3 +497,16 @@ class ManifoldElement(object):
             s *= (desired_norm / np.linalg.norm(s))
         v = sp.linalg.rq(np.random.randn(r, n), mode='economic')[1]
         return ManifoldElement((u, s, v))
+
+    @staticmethod
+    def zeros(shape, r):
+        u = np.zeros((shape[0], r))
+        u[np.diag_indices(r)] = 1.0
+        s = np.zeros(r)
+        v = np.zeros((r, shape[1]))
+        v[np.diag_indices(r)] = 1.0
+        elem = ManifoldElement.rand(shape, r)
+        elem.u = u
+        elem.s = s
+        elem.v = v
+        return elem

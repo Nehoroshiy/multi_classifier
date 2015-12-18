@@ -36,7 +36,7 @@ from scipy.optimize import minimize_scalar, line_search
 from riemannian_optimization.lowrank_matrix import ManifoldElement
 from riemannian_optimization.sparse.utils.retractions import svd_retraction
 from riemannian_optimization.sparse.utils.loss_functions import delta_on_sigma_set
-from riemannian_optimization.sparse.utils.projections import TangentVector, riemannian_grad_partial
+from riemannian_optimization.sparse.utils.projections import TangentVector, riemannian_grad_partial, riemannian_grad_full
 
 
 def conjugate_direction(x_prev, grad_prev, dir_prev, x, grad):
@@ -62,17 +62,28 @@ def closed_form_initial_guess(vec, delta, sigma_set):
     n_mat = csc_matrix(vec.release().evaluate(sigma_set)).T
     trace_first = n_mat.multiply(delta.T).sum()
     trace_second = n_mat.multiply(n_mat.T).sum()
-    return trace_first / trace_second
+    return np.abs(trace_first / trace_second)
 
 
 def cg(a, sigma_set, r, maxiter=900, eps=1e-9):
     def cost_function(param):
-        temp = x + param * conj_released
+        temp = svd_retraction(x + param * conj_released, r)
         return 0.5 * sp.sparse.linalg.norm(temp.evaluate(sigma_set) - a) ** 2
 
     def cost_raw(elem):
         return 0.5 * sp.sparse.linalg.norm(elem.evaluate(sigma_set) - a) ** 2
 
+    def func(x):
+        return 0.5 * sp.sparse.linalg.norm(x.evaluate(sigma_set) - a) ** 2
+
+    def grad_gen(a, sigma_set):
+        def grad(x):
+            return -riemannian_grad_full(x, a, sigma_set)
+        return grad
+
+    density = 1.0 * len(sigma_set[0]) / np.prod(a.shape)
+    #x = ManifoldElement.rand(a.shape, r,
+    #                         desired_norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
     x = ManifoldElement.rand(a.shape, r)
     x_prev = x
     error_history = []
@@ -93,14 +104,23 @@ def cg(a, sigma_set, r, maxiter=900, eps=1e-9):
             return x, it, error_history
         conj_prev, conj = conj, conjugate_direction(x_prev, grad_prev, conj_prev, x, grad)
         conj_prev_released, conj_released = conj_released, conj.release()
+        #alpha = closed_form_initial_guess(conj, delta, sigma_set)
         alpha = minimize_scalar(fun=cost_function, bounds=(0., 10.), method='bounded')['x']
+        #alpha = line_search(f=func, xk=x, pk=conj_released, amax=10.)
+        #if alpha is None:
+        #    alpha = minimize_scalar(fun=cost_function, bounds=(0., 10.), method='bounded')['x']
+
+        x_new = svd_retraction(x + alpha * conj_released, r)
         m = 0
+        """
         for i in range(20):
-            x_new = svd_retraction(x + (0.5**m * alpha) * conj_released, r)
+            x_new = svd_retraction(x + (0.5**i * alpha) * conj_released, r)
+            #print(cost_raw(x), cost_raw(x_new))
             if cost_raw(x) - cost_raw(x_new) >= \
-                    (-0.0001 * 0.5**m * alpha) * grad_released.scalar_product(conj_released):
+                    (-0.0001 * 0.5**i * alpha) * grad_released.scalar_product(conj_released):
                 m = i
                 break
+        """
         print('iter:{}, alpha: {}, m: {} error: {}'.format(it, alpha, m, error_history[-1]))
         x_prev, x = x, x_new
     print('Error {} is reached at iteration {}. Cannot converge'.format(error_history[-1], maxiter))
