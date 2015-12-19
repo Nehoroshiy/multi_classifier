@@ -65,7 +65,7 @@ def closed_form_initial_guess(vec, delta, sigma_set):
     return np.abs(trace_first / trace_second)
 
 
-def cg(a, sigma_set, r, maxiter=900, eps=1e-9):
+def cg(a, sigma_set, r, x0=None, maxiter=900, eps=1e-9):
     def cost_function(param):
         temp = svd_retraction(x + param * conj_released, r)
         return 0.5 * sp.sparse.linalg.norm(temp.evaluate(sigma_set) - a) ** 2
@@ -84,7 +84,7 @@ def cg(a, sigma_set, r, maxiter=900, eps=1e-9):
     density = 1.0 * len(sigma_set[0]) / np.prod(a.shape)
     #x = ManifoldElement.rand(a.shape, r,
     #                         desired_norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
-    x = ManifoldElement.rand(a.shape, r)
+    x = ManifoldElement.rand(a.shape, r) if x0 is None else x0
     x_prev = x
     error_history = []
     conj, conj_prev = TangentVector.zero(x), TangentVector.zero(x)

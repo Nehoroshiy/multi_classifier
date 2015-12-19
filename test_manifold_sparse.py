@@ -41,7 +41,7 @@ import cProfile
 
 if __name__ == "__main__":
     shape = (10, 10)
-    percent = 0.8
+    percent = 0.41
     sigma_set = generate_sigma_set(shape, percent)
     r = 2
     a_full = shape[1]*np.arange(shape[0])[:, None] + np.arange(shape[1])
@@ -56,10 +56,20 @@ if __name__ == "__main__":
     #print('fault rate: {}'.format(np.average(its == maxiter)))
     #cProfile.run('x, it, err = gd_approximate(a_sparse, sigma_set, r, maxiter=200)')
     #x, it, err = gd_approximate(a_sparse, sigma_set, r, maxiter=5)
-
-    x, it, err = cg(a_sparse, sigma_set, r, maxiter=900)
+    print(a_sparse.size)
+    x = None
+    maxiter_ordinary = 20
+    for rank in range(1, min(shape)):
+        current_maxiter = int(np.sqrt(rank))
+        x, it, err = cg(a_sparse, sigma_set, rank, x0=x, maxiter=maxiter_ordinary * current_maxiter)
+        if it != maxiter_ordinary * current_maxiter:
+            r = rank
+            break
+    print('rank is {}'.format(r))
     print('norm of x - a: {}'.format(np.linalg.norm(x.full_matrix() - a_full)))
 
+    print('x sigma:')
+    print(x.s)
     print('full matrix x:')
     print(x.full_matrix())
 
