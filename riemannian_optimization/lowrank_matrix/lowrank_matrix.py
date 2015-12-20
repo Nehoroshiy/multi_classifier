@@ -96,10 +96,10 @@ class ManifoldElement(object):
                 self.shape = data.shape
                 self.r = r
             else:
-                self.u = np.zeros(data.shape[0], r)
+                self.u = np.zeros((data.shape[0], r))
                 self.s = np.zeros(r)
-                self.v = np.zeros(r, data.shape[1])
-                self.u[:, data.r] = data.u
+                self.v = np.zeros((r, data.shape[1]))
+                self.u[:, :data.r] = data.u
                 self.s[:data.r] = data.s
                 self.v[:data.r, :] = data.v
                 self.shape = data.shape
@@ -431,15 +431,20 @@ class ManifoldElement(object):
         out : csr_matrix
             full matrix evaluated at sigma_set
         """
-        idx_argsort = sigma_set[0].argsort()
-        sigma_set[1][:] = sigma_set[1][idx_argsort]
-        sigma_set[0][:] = sigma_set[0][idx_argsort]
-        data = np.zeros(len(sigma_set[0]))
-        for (val, idx, count) in zip(*np.unique(sigma_set[0],
-                                               return_index=True,
-                                               return_counts=True)):
-            data[idx:idx + count] = np.dot(self.u[val, :] * self.s,
-                                           self.v[:, sigma_set[1][idx: idx + count]])
+        #idx_argsort = sigma_set[0].argsort()
+        #sigma_set[1][:] = sigma_set[1][idx_argsort]
+        #sigma_set[0][:] = sigma_set[0][idx_argsort]
+        rows = self.u[sigma_set[0], :] * self.s
+        cols = self.v[:, sigma_set[1]]
+        data = (rows * cols.T).sum(1)
+        assert(data.size == len(sigma_set[0]))
+        #return data
+        #data = np.zeros(len(sigma_set[0]))
+        #for (val, idx, count) in zip(*np.unique(sigma_set[0],
+        #                                       return_index=True,
+        #                                       return_counts=True)):
+        #    data[idx:idx + count] = np.dot(self.u[val, :] * self.s,
+        #                                   self.v[:, sigma_set[1][idx: idx + count]])
         return csr_matrix(coo_matrix((data, tuple(sigma_set)), shape=self.shape))
 
     def isclose(self, other, tol=1e-9):
