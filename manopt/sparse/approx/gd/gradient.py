@@ -31,9 +31,9 @@ import scipy as sp
 from scipy.sparse import linalg
 from scipy.optimize import minimize_scalar
 
-from ..utils.projections import riemannian_grad_full, riemannian_grad_partial, TangentVector
-from ..utils.loss_functions import delta_on_sigma_set
-from ..utils.retractions import svd_retraction as retraction
+from manopt.sparse.utils.projections import riemannian_grad_full, riemannian_grad_partial, TangentVector
+from manopt.sparse.utils.loss_functions import delta_on_sigma_set
+from manopt.sparse.utils.retractions import svd_retraction as retraction
 
 from manopt.lowrank_matrix import ManifoldElement
 

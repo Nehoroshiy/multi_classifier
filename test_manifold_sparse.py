@@ -27,18 +27,14 @@ THE SOFTWARE.
 """
 
 import numpy as np
-
 from matplotlib import pyplot as plt
-
 from scipy.sparse import csr_matrix, lil_matrix
 
 from manopt import ManifoldElement
-from manopt.sparse.gd import gd_approximate, momentum_approximate, cg, old_cg
+from manopt.sparse.approx.gd import cg
 from manopt.utils.test_utils import generate_sigma_set
 
 np.set_printoptions(linewidth=450, suppress=True)
-
-import cProfile
 
 # TODO rewrite all this shitty code.
 # 1. Move each variation of your gradient methods in separate files.

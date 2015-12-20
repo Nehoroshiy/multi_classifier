@@ -61,3 +61,6 @@ target/
 # idea
 .idea
 
+# data file for recommender test
+.dat
+

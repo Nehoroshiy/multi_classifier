@@ -25,26 +25,23 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
-import cProfile
 
-import pandas as pd
-from pandas.io.common import ZipFile
 import fileinput
+import sys
+from collections import namedtuple
 
 import numpy as np
+import pandas as pd
 import scipy as sp
+from pandas.io.common import ZipFile
 from scipy import sparse
 
-from collections import namedtuple
-import sys
-
-from manopt.sparse.gd import cg
-
+from manopt.sparse.approx.gd import cg
 
 if sys.version_info[0] < 3:
-    from StringIO import StringIO
+    pass
 else:
-    from io import StringIO
+    pass
 
 from io import BytesIO
 
