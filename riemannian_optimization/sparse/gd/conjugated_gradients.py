@@ -84,6 +84,9 @@ def cg(a, sigma_set, r, x0=None, maxiter=900, eps=1e-9):
     density = 1.0 * len(sigma_set[0]) / np.prod(a.shape)
     #x = ManifoldElement.rand(a.shape, r,
     #                         desired_norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
+    print('norm of {} part: {}'.format(density, np.linalg.norm(np.array(a[sigma_set].data))))
+    norm_bound = np.linalg.norm(np.array(a[sigma_set])) / np.sqrt(density)
+    print('norm_bound = {}'.format(norm_bound))
     x = ManifoldElement.rand(a.shape, r) if x0 is None else x0
     x_prev = x
     error_history = []
@@ -99,7 +102,72 @@ def cg(a, sigma_set, r, x0=None, maxiter=900, eps=1e-9):
                                                             as_manifold_elements=True))
         grad_prev_released, grad_released = grad_released, grad.release()
         error_history.append(grad_released.frobenius_norm())
-        if error_history[-1] < eps:
+        if error_history[-1] < eps * norm_bound:
+            print('Small grad norm {} is reached at iteration {}'.format(error_history[-1], it))
+            return x, it, error_history
+        conj_prev, conj = conj, conjugate_direction(x_prev, grad_prev, conj_prev, x, grad)
+        conj_prev_released, conj_released = conj_released, conj.release()
+        alpha = closed_form_initial_guess(conj, delta, sigma_set)
+        #alpha = minimize_scalar(fun=cost_function, bounds=(0., 10.), method='bounded')['x']
+        #alpha = line_search(f=func, xk=x, pk=conj_released, amax=10.)
+        #if alpha is None:
+        #    alpha = minimize_scalar(fun=cost_function, bounds=(0., 10.), method='bounded')['x']
+
+        x_new = svd_retraction(x + alpha * conj_released, r)
+        m = 0
+
+        for i in range(20):
+            x_new = svd_retraction(x + (0.5**i * alpha) * conj_released, r)
+            #print(cost_raw(x), cost_raw(x_new))
+            if cost_raw(x) - cost_raw(x_new) >= \
+                    (-0.0001 * 0.5**i * alpha) * grad_released.scalar_product(conj_released):
+                m = i
+                break
+
+        print('iter:{}, alpha: {}, m: {} error: {}'.format(it, alpha, m, error_history[-1]))
+        x_prev, x = x, x_new
+    print('Error {} is reached at iteration {}. Cannot converge'.format(error_history[-1], maxiter))
+    return x, maxiter, error_history
+
+
+def cg_line_search(a, sigma_set, r, x0=None, maxiter=900, eps=1e-9):
+    def cost_function(param):
+        temp = svd_retraction(x + param * conj_released, r)
+        return 0.5 * sp.sparse.linalg.norm(temp.evaluate(sigma_set) - a) ** 2
+
+    def cost_raw(elem):
+        return 0.5 * sp.sparse.linalg.norm(elem.evaluate(sigma_set) - a) ** 2
+
+    def func(x):
+        return 0.5 * sp.sparse.linalg.norm(x.evaluate(sigma_set) - a) ** 2
+
+    def grad_gen(a, sigma_set):
+        def grad(x):
+            return -riemannian_grad_full(x, a, sigma_set)
+        return grad
+
+    density = 1.0 * len(sigma_set[0]) / np.prod(a.shape)
+    #x = ManifoldElement.rand(a.shape, r,
+    #                         desired_norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
+    print('norm of {} part: {}'.format(density, np.linalg.norm(np.array(a[sigma_set].data))))
+    norm_bound = np.linalg.norm(np.array(a[sigma_set])) / np.sqrt(density)
+    print('norm_bound = {}'.format(norm_bound))
+    x = ManifoldElement.rand(a.shape, r) if x0 is None else x0
+    x_prev = x
+    error_history = []
+    conj, conj_prev = TangentVector.zero(x), TangentVector.zero(x)
+    conj_released, conj_prev_released = conj.release(), conj_prev.release()
+    grad = -TangentVector(x, riemannian_grad_partial(x, a, sigma_set,
+                                                     as_manifold_elements=True))
+    grad_released = grad.release()
+    for it in range(maxiter):
+        delta = delta_on_sigma_set(x, a, sigma_set)
+        grad_prev, grad = \
+            grad, -TangentVector(x, riemannian_grad_partial(x, a, sigma_set, grad=delta,
+                                                            as_manifold_elements=True))
+        grad_prev_released, grad_released = grad_released, grad.release()
+        error_history.append(grad_released.frobenius_norm())
+        if error_history[-1] < eps * norm_bound:
             print('Small grad norm {} is reached at iteration {}'.format(error_history[-1], it))
             return x, it, error_history
         conj_prev, conj = conj, conjugate_direction(x_prev, grad_prev, conj_prev, x, grad)
