@@ -38,7 +38,7 @@ from scipy import sparse
 from collections import namedtuple
 import sys
 
-from riemannian_optimization.sparse.gd import cg
+from manopt.sparse.gd import cg
 
 
 if sys.version_info[0] < 3:
@@ -101,7 +101,7 @@ def split_data(data, test_ratio=0.2):
 if __name__ == "__main__":
     local_file_name = 'ml-10M100K/ratings.dat'
     data_matrix = get_movielens_data(local_file_name)
-    train_matrix, test_matrix = split_data(data_matrix, test_ratio=0.98)
+    train_matrix, test_matrix = split_data(data_matrix, test_ratio=0.995)
 
     print('Matrix build of shape {} step done. Start sorting sigma_set'.format(train_matrix.shape))
 
@@ -116,14 +116,17 @@ if __name__ == "__main__":
 
     x = None
     maxiter_ordinary = 10
-    for rank in range(1, 500):
-        current_maxiter = int(np.log(rank) + 1)
-        x, it, err = cg(train_matrix, sigma_set, rank, x0=x, maxiter=maxiter_ordinary * current_maxiter)
-        if rank in [3, 4, 5]:
-            cProfile.run('cg(train_matrix, sigma_set, rank, x0=x, maxiter=maxiter_ordinary * current_maxiter)')
+    r = 6
+    for rank in range(1, r):
+        current_maxiter = 1 #np.log(rank) + 1
+        x, it, err = cg(train_matrix, sigma_set, rank, x0=x, maxiter=int(maxiter_ordinary * current_maxiter))
+        #if rank in [3, 4, 5]:
+        #    cProfile.run('cg(train_matrix, sigma_set, rank, x0=x, maxiter=maxiter_ordinary * current_maxiter)')
         print('Iterations for rank {} done with err {}'.format(rank, err[-1]))
-        if it != maxiter_ordinary * current_maxiter:
+        print('Current sigmas: {}'.format(x.s))
+        if it != int(maxiter_ordinary * current_maxiter):
             r = rank
             break
     print('rank is {}'.format(r))
     print(x.s)
+    x, it, err = cg(train_matrix, sigma_set, r=6, x0=x, maxiter=200)

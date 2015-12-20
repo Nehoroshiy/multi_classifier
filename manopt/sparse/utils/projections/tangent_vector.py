@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 import numpy as np
 
-from riemannian_optimization.lowrank_matrix import ManifoldElement
+from manopt.lowrank_matrix import ManifoldElement
 from ..vector_transport import vector_transport_base
 from riemannian_grad_partial import restore_full_from_partial
 

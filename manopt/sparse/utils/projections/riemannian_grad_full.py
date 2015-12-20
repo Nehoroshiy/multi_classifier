@@ -27,7 +27,7 @@ THE SOFTWARE.
 """
 
 from ..loss_functions import delta_on_sigma_set
-from riemannian_optimization.lowrank_matrix import ManifoldElement
+from manopt.lowrank_matrix import ManifoldElement
 
 
 def riemannian_grad_full(x, a, sigma_set, grad=None):

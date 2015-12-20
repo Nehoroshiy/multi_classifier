@@ -32,9 +32,9 @@ from matplotlib import pyplot as plt
 
 from scipy.sparse import csr_matrix, lil_matrix
 
-from riemannian_optimization import ManifoldElement
-from riemannian_optimization.sparse.gd import gd_approximate, momentum_approximate, cg, old_cg
-from riemannian_optimization.utils.test_utils import generate_sigma_set
+from manopt import ManifoldElement
+from manopt.sparse.gd import gd_approximate, momentum_approximate, cg, old_cg
+from manopt.utils.test_utils import generate_sigma_set
 
 np.set_printoptions(linewidth=450, suppress=True)
 

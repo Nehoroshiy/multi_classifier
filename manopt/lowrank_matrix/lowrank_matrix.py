@@ -33,7 +33,7 @@ from scipy import linalg, sparse
 
 from scipy.sparse import coo_matrix, csr_matrix, csc_matrix, lil_matrix
 
-from riemannian_optimization.utils.approx_utils import csvd
+from manopt.utils.approx_utils import csvd
 
 
 def orth(a, eps=1e-12):

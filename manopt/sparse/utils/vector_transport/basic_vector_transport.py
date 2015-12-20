@@ -26,7 +26,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-from riemannian_optimization.lowrank_matrix import ManifoldElement
+from manopt.lowrank_matrix import ManifoldElement
 
 
 #TODO accept also simple matrices

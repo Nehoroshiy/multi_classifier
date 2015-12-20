@@ -33,10 +33,10 @@ from scipy import sparse
 
 from scipy.sparse import linalg, csr_matrix, csc_matrix
 from scipy.optimize import minimize_scalar, line_search
-from riemannian_optimization.lowrank_matrix import ManifoldElement
-from riemannian_optimization.sparse.utils.retractions import svd_retraction
-from riemannian_optimization.sparse.utils.loss_functions import delta_on_sigma_set
-from riemannian_optimization.sparse.utils.projections import TangentVector, riemannian_grad_partial, riemannian_grad_full
+from manopt.lowrank_matrix import ManifoldElement
+from manopt.sparse.utils.retractions import svd_retraction
+from manopt.sparse.utils.loss_functions import delta_on_sigma_set
+from manopt.sparse.utils.projections import TangentVector, riemannian_grad_partial, riemannian_grad_full
 
 
 def conjugate_direction(x_prev, grad_prev, dir_prev, x, grad):
@@ -61,7 +61,7 @@ def conjugate_direction(x_prev, grad_prev, dir_prev, x, grad):
 def closed_form_initial_guess(vec, delta, sigma_set):
     n_mat = csc_matrix(vec.release().evaluate(sigma_set)).T
     trace_first = n_mat.multiply(delta.T).sum()
-    trace_second = n_mat.multiply(n_mat.T).sum()
+    trace_second = n_mat.multiply(n_mat).sum()
     return np.abs(trace_first / trace_second)
 
 

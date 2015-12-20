@@ -35,7 +35,7 @@ from ..utils.projections import riemannian_grad_full, riemannian_grad_partial, T
 from ..utils.loss_functions import delta_on_sigma_set
 from ..utils.retractions import svd_retraction as retraction
 
-from riemannian_optimization.lowrank_matrix import ManifoldElement
+from manopt.lowrank_matrix import ManifoldElement
 
 
 def gd_approximate(a, sigma_set, r, x0=None, maxiter=900, eps=1e-9):

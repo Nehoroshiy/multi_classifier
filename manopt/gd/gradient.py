@@ -32,8 +32,8 @@ from scipy import linalg, optimize
 from numpy.linalg import svd, qr, norm, matrix_rank as mr
 from scipy.linalg import rq
 from scipy.optimize import minimize_scalar
-from riemannian_optimization.utils.approx_utils import csvd, rel_error
-from riemannian_optimization.lowrank_matrix import ManifoldElement
+from manopt.utils.approx_utils import csvd, rel_error
+from manopt.lowrank_matrix import ManifoldElement
 
 
 def euclid_grad(x, a, sigma_set):

@@ -34,7 +34,7 @@ from lowrank_matrix import ManifoldElement
 
 from scipy.sparse import csr_matrix, coo_matrix
 
-from riemannian_optimization.utils.test_utils import generate_sigma_set
+from manopt.utils.test_utils import generate_sigma_set
 
 
 def strict_check(manifold_element, original_matrix):
