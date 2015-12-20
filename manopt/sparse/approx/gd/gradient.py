@@ -74,7 +74,7 @@ def gd_approximate(a, sigma_set, r, x0=None, maxiter=900, eps=1e-9):
     density = 1.0 * len(sigma_set[0]) / np.prod(a.shape)
     if x0 is None:
         x = ManifoldElement.rand(a.shape, r,
-                                 desired_norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
+                                 norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
     else:
         x = x0
     err = []
@@ -86,7 +86,7 @@ def gd_approximate(a, sigma_set, r, x0=None, maxiter=900, eps=1e-9):
             return x, it, err
         # projection = -riemannian_grad_full(x, a, sigma_set)
         projection = -TangentVector(x,
-                                    riemannian_grad_partial(x, a, sigma_set, grad=grad, as_manifold_elements=True)).release()
+                                    riemannian_grad_partial(x, a, sigma_set, grad=grad, manifold_elems=True)).release()
         alpha = minimize_scalar(fun=cost_func, bounds=(0., 10.), method='bounded')['x']
         print('iter:{}, alpha: {}, error: {}'.format(it, alpha, err[-1]))
         x = retraction(x + alpha * projection, r)
@@ -129,7 +129,7 @@ def old_momentum_approximate(a, sigma_set, r, maxiter=900, mu=0.9, learn_rate=0.
 
     density = 1.0 * len(sigma_set[0]) / np.prod(a.shape)
     x = ManifoldElement.rand(a.shape, r,
-                             desired_norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
+                             norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
     err = []
     v = ManifoldElement.rand(a.shape, r)
     v.s[:] = 0
@@ -140,7 +140,7 @@ def old_momentum_approximate(a, sigma_set, r, maxiter=900, mu=0.9, learn_rate=0.
             print('Small grad norm {} is reached at iteration {}'.format(err[-1], it))
             return x, it, err
         projection = riemannian_grad_full(x, a, sigma_set, grad=-grad)
-        proj = riemannian_grad_partial(x, a, sigma_set, grad=-grad, as_manifold_elements=True)
+        proj = riemannian_grad_partial(x, a, sigma_set, grad=-grad, manifold_elems=True)
         alpha = minimize_scalar(fun=cost_func, bounds=(0., 10.), method='bounded')['x']
         v = mu * v + alpha * projection
         print('iter:{}, alpha: {}, error: {}'.format(it, alpha, err[-1]))
@@ -186,7 +186,7 @@ def momentum_approximate(a, sigma_set, r, x0=None, maxiter=900, mu=0.85, learn_r
     density = 1.0 * len(sigma_set[0]) / np.prod(a.shape)
     if x0 is None:
         x = ManifoldElement.rand(a.shape, r,
-                                 desired_norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
+                                 norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
     else:
         x = x0
     err = []
@@ -197,7 +197,7 @@ def momentum_approximate(a, sigma_set, r, x0=None, maxiter=900, mu=0.85, learn_r
         if err[-1] < eps:
             print('Small grad norm {} is reached at iteration {}'.format(err[-1], it))
             return x, it, err
-        projection = TangentVector(x, riemannian_grad_partial(x, a, sigma_set, grad=-grad, as_manifold_elements=True))
+        projection = TangentVector(x, riemannian_grad_partial(x, a, sigma_set, grad=-grad, manifold_elems=True))
         v = mu * v.transport(x)
         v_released = v.release()
         projection_released = projection.release()

@@ -93,13 +93,13 @@ def cg(a, sigma_set, r, x0=None, maxiter=900, eps=1e-9):
     conj, conj_prev = TangentVector.zero(x), TangentVector.zero(x)
     conj_released, conj_prev_released = conj.release(), conj_prev.release()
     grad = -TangentVector(x, riemannian_grad_partial(x, a, sigma_set,
-                                                     as_manifold_elements=True))
+                                                     manifold_elems=True))
     grad_released = grad.release()
     for it in range(maxiter):
         delta = delta_on_sigma_set(x, a, sigma_set)
         grad_prev, grad = \
             grad, -TangentVector(x, riemannian_grad_partial(x, a, sigma_set, grad=delta,
-                                                            as_manifold_elements=True))
+                                                            manifold_elems=True))
         grad_prev_released, grad_released = grad_released, grad.release()
         error_history.append(grad_released.frobenius_norm())
         if error_history[-1] < eps * norm_bound:
@@ -158,13 +158,13 @@ def cg_line_search(a, sigma_set, r, x0=None, maxiter=900, eps=1e-9):
     conj, conj_prev = TangentVector.zero(x), TangentVector.zero(x)
     conj_released, conj_prev_released = conj.release(), conj_prev.release()
     grad = -TangentVector(x, riemannian_grad_partial(x, a, sigma_set,
-                                                     as_manifold_elements=True))
+                                                     manifold_elems=True))
     grad_released = grad.release()
     for it in range(maxiter):
         delta = delta_on_sigma_set(x, a, sigma_set)
         grad_prev, grad = \
             grad, -TangentVector(x, riemannian_grad_partial(x, a, sigma_set, grad=delta,
-                                                            as_manifold_elements=True))
+                                                            manifold_elems=True))
         grad_prev_released, grad_released = grad_released, grad.release()
         error_history.append(grad_released.frobenius_norm())
         if error_history[-1] < eps * norm_bound:
@@ -208,10 +208,10 @@ def old_cg(a, sigma_set, r, maxiter=900, eps=1e-9):
     x_prev = x
     error_history = []
     conj_dir, conj_dir_prev = TangentVector.zero(x), TangentVector.zero(x)
-    grad = -TangentVector(x, riemannian_grad_partial(x, a, sigma_set, as_manifold_elements=True))
+    grad = -TangentVector(x, riemannian_grad_partial(x, a, sigma_set, manifold_elems=True))
     for it in range(maxiter):
         delta = delta_on_sigma_set(x, a, sigma_set)
-        grad_prev, grad = grad, -TangentVector(x, riemannian_grad_partial(x, a, sigma_set, grad=delta, as_manifold_elements=True))
+        grad_prev, grad = grad, -TangentVector(x, riemannian_grad_partial(x, a, sigma_set, grad=delta, manifold_elems=True))
         error_history.append(grad.release().frobenius_norm())
         if error_history[-1] < eps:
             print('Small grad norm {} is reached at iteration {}'.format(error_history[-1], it))

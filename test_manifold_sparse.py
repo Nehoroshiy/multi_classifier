@@ -31,7 +31,7 @@ from matplotlib import pyplot as plt
 from scipy.sparse import csr_matrix, lil_matrix
 
 from manopt import ManifoldElement
-from manopt.sparse.approx.gd import cg
+from manopt.sparse.approx import approx
 from manopt.utils.test_utils import generate_sigma_set
 
 np.set_printoptions(linewidth=450, suppress=True)
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     maxiter_ordinary = 20
     for rank in range(1, r):
         current_maxiter = np.log(rank) + 1
-        x, it, err = cg(a_sparse, sigma_set, rank, x0=x, maxiter=int(maxiter_ordinary * current_maxiter), eps=1e-10)
+        x, it, err = approx(a_sparse, sigma_set, rank, x0=x, method='gd', maxiter=int(maxiter_ordinary * current_maxiter), eps=1e-10)
         if it != int(maxiter_ordinary * current_maxiter):
             r = rank
             break
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     r = 2
     print('real rank is {}'.format(r))
     x = ManifoldElement(x, r)
-    x, it, err = cg(a_sparse, sigma_set, r, x0=x, maxiter=100, eps=1e-14)
+    x, it, err = approx(a_sparse, sigma_set, r, x0=x, method='gd', maxiter=100, eps=1e-14)
     print('rank is {}'.format(r))
     print('eps of x - a: {}'.format(np.linalg.norm(x.full_matrix() - a_full) / np.linalg.norm(a_full)))
 

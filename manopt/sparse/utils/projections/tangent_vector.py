@@ -43,6 +43,7 @@ class TangentVector():
         if type(base) is not ManifoldElement:
             raise ValueError("base must be ManifoldElement --- point on the manifold")
         self.base = base
+        self._released = None
         if type(data) is tuple:
             if len(data) != 3:
                 raise ValueError("data must contains 3 ManifoldElements")
@@ -90,7 +91,12 @@ class TangentVector():
         return TangentVector(base, vector_transport_base(self.base, base, (self.m, self.u, self.v)))
 
     def release(self):
-        return restore_full_from_partial(self.base, (self.m, self.u, self.v))
+        if self._released is None:
+            self._released = restore_full_from_partial(self.base, (self.m, self.u, self.v))
+            return restore_full_from_partial(self.base, (self.m, self.u, self.v))
+        else:
+            return self._released
+
 
     @staticmethod
     def zero(base):

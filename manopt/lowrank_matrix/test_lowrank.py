@@ -147,15 +147,15 @@ def test_evaluation(shape, r, niter=10):
 
 def test_trace(shape, r, niter=10):
     for _ in range(niter):
-        elem = ManifoldElement.rand(shape, r, desired_norm=100*np.random.random() + 10)
+        elem = ManifoldElement.rand(shape, r, norm=100 * np.random.random() + 10)
         full = elem.full_matrix()
         assert(np.isclose(elem.trace(), np.trace(full)))
 
 
 def test_scalar_product(shape, r, niter=10):
     for _ in range(niter):
-        left = ManifoldElement.rand(shape, r, desired_norm=100*np.random.random() + 10)
-        right = ManifoldElement.rand(shape, r, desired_norm=100*np.random.random() + 10)
+        left = ManifoldElement.rand(shape, r, norm=100 * np.random.random() + 10)
+        right = ManifoldElement.rand(shape, r, norm=100 * np.random.random() + 10)
         left_full = left.full_matrix()
         right_full = right.full_matrix()
         assert(np.isclose(left.scalar_product(right), np.trace(left_full.dot(right_full.T))))

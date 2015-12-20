@@ -142,7 +142,7 @@ class ManifoldElement(object):
 
     def rearrange(self):
         """
-        rearrange permutes U \Sigma V^* matrix to obtain
+        Rearrange permutes U \Sigma V^* matrix to obtain
         non-increasing property on diagonal \Sigma matrix
 
         Returns
@@ -157,8 +157,8 @@ class ManifoldElement(object):
 
     def _balance_right(self):
         """
-        We only have non-orthogonal v factor, so we need to orthogonalize
-        it
+        We only have non-orthogonal v factor, so we need to orthogonalize it
+
         Returns
         -------
         None
@@ -169,8 +169,8 @@ class ManifoldElement(object):
 
     def _balance_left(self):
         """
-        We only have non-orthogonal u factor, so we need to orthogonalize
-        it
+        We only have non-orthogonal u factor, so we need to orthogonalize it
+
         Returns
         -------
         None
@@ -182,6 +182,7 @@ class ManifoldElement(object):
     def _balance(self):
         """
         All factors are non-orthogonal, so we need full orthogonalization
+
         Returns
         -------
         None
@@ -195,6 +196,7 @@ class ManifoldElement(object):
     def balance(self):
         """
         Performs reorthogonalization of factors, if it needs
+
         Returns
         -------
         None
@@ -472,7 +474,7 @@ class ManifoldElement(object):
             return (self - other).frobenius_norm() / largest_norm < tol
 
     @staticmethod
-    def rand(shape, r, desired_norm=None):
+    def rand(shape, r, norm=None):
         """
         Generates ManifoldElement with parameters:
         * U (shape[0], r) with elements picked from N(0, 1)
@@ -486,7 +488,7 @@ class ManifoldElement(object):
             Output shape.
         r : int
             Desired rank
-        desired_norm : float, optional
+        norm : float, optional
             Desired frobenius norm of matrix
 
         Returns
@@ -498,8 +500,8 @@ class ManifoldElement(object):
 
         u = np.linalg.qr(np.random.randn(m, r))[0]
         s = np.sort(np.abs(np.random.randn(r)))[::-1]
-        if desired_norm is not None:
-            s *= (desired_norm / np.linalg.norm(s))
+        if norm is not None:
+            s *= (norm / np.linalg.norm(s))
         v = sp.linalg.rq(np.random.randn(r, n), mode='economic')[1]
         return ManifoldElement((u, s, v))
 

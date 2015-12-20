@@ -26,34 +26,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-import numpy as np
-import scipy as sp
+from cg import cg
+from gd import gd
 
-from scipy import sparse
-from basic_vector_transport import vector_transport_base
+ACCEPTED_METHODS = {
+    'cg': cg,
+    'gd':gd
+}
 
-from scipy.sparse import csr_matrix, lil_matrix
-
-from manopt import ManifoldElement
-from manopt.sparse.utils.projections import riemannian_grad_partial
-from manopt.utils.test_utils import generate_sigma_set
-
-
-def obvious_test(shape, r, niter=10):
-    percent = 0.5
-    sigma_set = generate_sigma_set(shape, percent)
-    a_full = shape[1]*np.arange(shape[0])[:, None] + np.arange(shape[1])
-    a_sparse = lil_matrix(shape)
-    for (i, j) in zip(*sigma_set):
-        a_sparse[i, j] = a_full[i, j]
-    a_sparse = csr_matrix(a_sparse)
-    x = ManifoldElement.rand(shape, r)
-    grad = riemannian_grad_partial(x, a_sparse, sigma_set, manifold_elems=True)
-    new_grad = vector_transport_base(x, x, grad)
-    for elem, new_elem in zip(grad, new_grad):
-        assert(np.allclose(elem.full_matrix(), new_elem.full_matrix()))
-
-
-if __name__ == "__main__":
-    args = ((100, 50), 10, 10)
-    obvious_test(*args)
+def approx(a, sigma_set, r, x0=None, method='cg', maxiter=900, eps=1e-9):
+    if method in ACCEPTED_METHODS:
+        return ACCEPTED_METHODS[method](a, sigma_set, r, x0, maxiter, eps)

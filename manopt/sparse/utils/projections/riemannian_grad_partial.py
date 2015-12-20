@@ -30,7 +30,7 @@ from ..loss_functions import delta_on_sigma_set
 from manopt.lowrank_matrix import ManifoldElement
 
 
-def riemannian_grad_partial(x, a, sigma_set, grad=None, as_manifold_elements=False):
+def riemannian_grad_partial(x, a, sigma_set, grad=None, manifold_elems=False):
     """
     Riemannian gradient as a parts from which one can restore it
 
@@ -65,7 +65,7 @@ def riemannian_grad_partial(x, a, sigma_set, grad=None, as_manifold_elements=Fal
     mid = x.u.T.dot(right_projected)
     u = right_projected - x.u.dot(mid)
     v = left_projected - x.v.T.dot(mid.T)
-    if as_manifold_elements:
+    if manifold_elems:
         return ManifoldElement(mid, x.r), ManifoldElement(u, x.r), ManifoldElement(v.T, x.r)
     else:
         return mid, u, v.T

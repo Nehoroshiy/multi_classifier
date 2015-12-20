@@ -28,3 +28,4 @@ THE SOFTWARE.
 
 from gradient import gd_approximate, momentum_approximate
 from conjugated_gradients import cg, old_cg
+from gd import gd
