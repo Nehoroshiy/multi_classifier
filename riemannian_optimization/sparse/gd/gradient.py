@@ -38,7 +38,7 @@ from ..utils.retractions import svd_retraction as retraction
 from riemannian_optimization.lowrank_matrix import ManifoldElement
 
 
-def gd_approximate(a, sigma_set, r, maxiter=900, eps=1e-9):
+def gd_approximate(a, sigma_set, r, x0=None, maxiter=900, eps=1e-9):
     """
     Approximation of sparse matrix a with gradient descend method.
     Matrix a is known only at sigma_set indices, at other indices it equals zero.
@@ -68,12 +68,15 @@ def gd_approximate(a, sigma_set, r, maxiter=900, eps=1e-9):
         List of grad norms at each iteration
     """
     def cost_func(param):
-        temp = x + param * projection
+        temp = retraction(x + param * projection, r)
         return 0.5 * sp.sparse.linalg.norm(temp.evaluate(sigma_set) - a) ** 2
 
     density = 1.0 * len(sigma_set[0]) / np.prod(a.shape)
-    x = ManifoldElement.rand(a.shape, r,
-                             desired_norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
+    if x0 is None:
+        x = ManifoldElement.rand(a.shape, r,
+                                 desired_norm=np.linalg.norm(a[sigma_set]) / np.sqrt(density))
+    else:
+        x = x0
     err = []
     for it in range(maxiter):
         grad = delta_on_sigma_set(x, a, sigma_set)
@@ -81,7 +84,9 @@ def gd_approximate(a, sigma_set, r, maxiter=900, eps=1e-9):
         if err[-1] < eps:
             print('Small grad norm {} is reached at iteration {}'.format(err[-1], it))
             return x, it, err
-        projection = riemannian_grad_full(x, a, sigma_set, grad=-grad)
+        # projection = -riemannian_grad_full(x, a, sigma_set)
+        projection = -TangentVector(x,
+                                    riemannian_grad_partial(x, a, sigma_set, grad=grad, as_manifold_elements=True)).release()
         alpha = minimize_scalar(fun=cost_func, bounds=(0., 10.), method='bounded')['x']
         print('iter:{}, alpha: {}, error: {}'.format(it, alpha, err[-1]))
         x = retraction(x + alpha * projection, r)
@@ -119,7 +124,7 @@ def old_momentum_approximate(a, sigma_set, r, maxiter=900, mu=0.9, learn_rate=0.
         List of grad norms at each iteration
     """
     def cost_func(param):
-        temp = x + mu * v + param * projection
+        temp = retraction(x + mu * v + param * projection)
         return 0.5 * sp.sparse.linalg.norm(temp.evaluate(sigma_set) - a) ** 2
 
     density = 1.0 * len(sigma_set[0]) / np.prod(a.shape)
