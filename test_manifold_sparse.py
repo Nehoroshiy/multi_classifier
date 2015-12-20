@@ -32,6 +32,7 @@ from matplotlib import pyplot as plt
 
 from scipy.sparse import csr_matrix, lil_matrix
 
+from riemannian_optimization import ManifoldElement
 from riemannian_optimization.sparse.gd import gd_approximate, momentum_approximate, cg, old_cg
 from riemannian_optimization.utils.test_utils import generate_sigma_set
 
@@ -39,12 +40,26 @@ np.set_printoptions(linewidth=450, suppress=True)
 
 import cProfile
 
+# TODO rewrite all this shitty code.
+# 1. Move each variation of your gradient methods in separate files.
+# 2. Write test that will compare behavior of your algorithms.
+# 3. Create some tests (low rank matrices with ranks [2, 3, 4, 5, ...])
+# 4. Try to test on Hilbert matrix
+# 5. Try to make experimenting easier (unified way to make low-rank matrices,
+#       unified way to perform and compare algorithms and they quality)
 if __name__ == "__main__":
-    shape = (10, 10)
-    percent = 0.41
-    sigma_set = generate_sigma_set(shape, percent)
+    shape = (500, 500)
     r = 2
-    a_full = shape[1]*np.arange(shape[0])[:, None] + np.arange(shape[1])
+    opt_nnz = 10. * r * sum(shape)
+    percent = opt_nnz / np.prod(shape)
+    print('percent: {}'.format(percent))
+    sigma_set = generate_sigma_set(shape, percent)
+    sigma_set[0][:] = sigma_set[0][sigma_set[1].argsort()]
+    sigma_set[1][:] = sigma_set[1][sigma_set[1].argsort()]
+    sigma_set[1][:] = sigma_set[1][sigma_set[0].argsort()]
+    sigma_set[0][:] = sigma_set[0][sigma_set[0].argsort()]
+
+    a_full = 1. * (shape[1]*np.arange(shape[0])[:, None] + np.arange(shape[1]))
     a_sparse = lil_matrix(shape)
     for (i, j) in zip(*sigma_set):
         a_sparse[i, j] = a_full[i, j]
@@ -56,20 +71,30 @@ if __name__ == "__main__":
     #print('fault rate: {}'.format(np.average(its == maxiter)))
     #cProfile.run('x, it, err = gd_approximate(a_sparse, sigma_set, r, maxiter=200)')
     #x, it, err = gd_approximate(a_sparse, sigma_set, r, maxiter=5)
-    print(a_sparse.size)
+    #x, it, err = cg(a_sparse, sigma_set, r, maxiter=600)
+    print('a nnz: {}'.format(a_sparse.size))
+    print('real a norm: {}'.format(np.linalg.norm(a_full)))
+
     x = None
     maxiter_ordinary = 20
-    for rank in range(1, min(shape)):
-        current_maxiter = int(np.sqrt(rank))
-        x, it, err = cg(a_sparse, sigma_set, rank, x0=x, maxiter=maxiter_ordinary * current_maxiter)
-        if it != maxiter_ordinary * current_maxiter:
+    for rank in range(1, r):
+        current_maxiter = np.log(rank) + 1
+        x, it, err = cg(a_sparse, sigma_set, rank, x0=x, maxiter=int(maxiter_ordinary * current_maxiter), eps=1e-10)
+        if it != int(maxiter_ordinary * current_maxiter):
             r = rank
             break
     print('rank is {}'.format(r))
-    print('norm of x - a: {}'.format(np.linalg.norm(x.full_matrix() - a_full)))
-
     print('x sigma:')
     print(x.s)
+    print('eps of x - a: {}'.format(np.linalg.norm(x.full_matrix() - a_full) / np.linalg.norm(a_full)))
+    r = 2
+    print('real rank is {}'.format(r))
+    x = ManifoldElement(x, r)
+    x, it, err = cg(a_sparse, sigma_set, r, x0=x, maxiter=100, eps=1e-14)
+    print('rank is {}'.format(r))
+    print('eps of x - a: {}'.format(np.linalg.norm(x.full_matrix() - a_full) / np.linalg.norm(a_full)))
+
+
     print('full matrix x:')
     print(x.full_matrix())
 
