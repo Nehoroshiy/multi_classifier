@@ -49,17 +49,18 @@ np.set_printoptions(linewidth=450, suppress=True)
 #       unified way to perform and compare algorithms and they quality)
 
 
-def gen_sum_func(shape):
+def gen_sum_func(shape, power=1):
     def sum_func(indices):
-        return indices[:, 0] + (1. / shape[1]) * indices[:, 1]
+        return (indices[:, 0] + (1. / shape[1]) * indices[:, 1])**power
     return sum_func
 
 
-def approx_test_ranks(box, ranks=None, maxiter=900):
+def approx_test_ranks(shape, ranks=None, maxiter=200):
     approximator = CGApproximator()
-    ranks = np.arange(1, 4) if ranks is None else np.asarray(ranks, dtype=int)
+    ranks = np.arange(1, 5) if ranks is None else np.asarray(ranks, dtype=int)
+    boxes = [BlackBox(gen_sum_func(shape, power=r-1), shape) for r in ranks]
     results = []
-    for r in ranks:
+    for r, box in zip(ranks, boxes):
         opt_nnz = 10. * r * sum(shape)
         percent = opt_nnz / np.prod(shape)
         print('percent: {}'.format(percent))
@@ -69,9 +70,12 @@ def approx_test_ranks(box, ranks=None, maxiter=900):
 
         results.append(approximator.approximate(a_sparse, r, sigma_set, maxiter=maxiter, eps=1e-10))
     for i, (x, it, err) in enumerate(results):
+        box = boxes[i]
         print('eps of x - a: {} at r={}'.format(np.linalg.norm(x.full_matrix() - box[:]) / np.linalg.norm(box[:]), i+1))
-        err = np.pad(err, (0, maxiter - len(err)), mode='constant')
-        plt.plot(np.arange(maxiter), err)
+        err = np.pad(np.array(err) / np.linalg.norm(box[:]), (0, maxiter - len(err)), mode='constant')
+        if i >= 1:
+            plt.plot(np.arange(maxiter), err)
+    plt.legend([r'r=%s' % r for r in ranks[1:]])
     plt.show()
     return None
 
@@ -79,4 +83,4 @@ if __name__ == "__main__":
     shapes = [(n, n) for n in 32*np.arange(1, 4)]
     ranks = np.arange(1, 5)
     shape = shapes[-1]
-    approx_test_ranks(BlackBox(gen_sum_func(shape), shape))
+    approx_test_ranks(shape)

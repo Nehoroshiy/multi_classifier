@@ -81,7 +81,7 @@ class MGDApproximator(AbstractApproximator):
         self.mu = None
 
     def approximate(self, a, r, sigma_set=None, x0=None, mu=0.85, maxiter=900, eps=EPS):
-        return self._approximate(a, r, sigma_set=sigma_set, x0=x0, mu=mu, maxiter=900, eps=eps)
+        return self._approximate(a, r, sigma_set=sigma_set, x0=x0, mu=mu, maxiter=maxiter, eps=eps)
 
     def _approximate(self, a, r, sigma_set=None, x0=None, mu=0.85, maxiter=900, eps=EPS):
         if a is None:

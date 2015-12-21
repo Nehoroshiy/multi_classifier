@@ -58,7 +58,7 @@ class CGApproximator(AbstractApproximator):
         self.conj_prev, self.conj = None, None
 
     def approximate(self, a, r, sigma_set=None, x0=None, maxiter=900, eps=EPS):
-        return self._approximate(a, r, sigma_set=sigma_set, x0=x0, maxiter=900, eps=eps)
+        return self._approximate(a, r, sigma_set=sigma_set, x0=x0, maxiter=maxiter, eps=eps)
 
     def _approximate(self, a, r, sigma_set=None, x0=None, maxiter=900, eps=EPS):
         if a is None:

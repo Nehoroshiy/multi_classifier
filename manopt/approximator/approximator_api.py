@@ -28,9 +28,13 @@ THE SOFTWARE.
 
 import numpy as np
 
+
 class AbstractApproximator():
     def __init__(self):
         self.grad = None
+        self.sigma_set = None
+        self.density = None
+        self.norm_bound = None
 
     def approximate(self, a, r, sigma_set=None, x0=None, maxiter=900, eps=1e-9):
         raise NotImplementedError()
