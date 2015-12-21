@@ -57,9 +57,6 @@ class CGApproximator(AbstractApproximator):
         self.grad_prev, self.grad = None, None
         self.conj_prev, self.conj = None, None
 
-    def error(self):
-        return self.grad.release().frobenius_norm()
-
     def approximate(self, a, r, sigma_set=None, x0=None, maxiter=900, eps=EPS):
         return self._approximate(a, r, sigma_set=sigma_set, x0=x0, maxiter=900, eps=eps)
 
@@ -71,24 +68,8 @@ class CGApproximator(AbstractApproximator):
 
         for rank in range(1, r):
             x0, it, err = self.cg_approximate(r=rank, x0=x0,
-                                              maxiter=10, eps=eps)
+                                              maxiter=20, eps=eps)
         return self.cg_approximate(r=r, x0=x0, maxiter=maxiter, eps=eps)
-
-    def initialization(self, sigma_set=None):
-        if sigma_set is None:
-            self.sigma_set = self.target_matrix.nonzero()
-        else:
-            self.sigma_set = sigma_set
-        self.sigma_set[0][:] = self.sigma_set[0][self.sigma_set[1].argsort(kind='mergesort')]
-        self.sigma_set[1][:] = self.sigma_set[1][self.sigma_set[1].argsort(kind='mergesort')]
-        self.sigma_set[1][:] = self.sigma_set[1][self.sigma_set[0].argsort(kind='mergesort')]
-        self.sigma_set[0][:] = self.sigma_set[0][self.sigma_set[0].argsort(kind='mergesort')]
-
-        self.density = 1.0 * len(self.sigma_set[0]) / np.prod(self.target_matrix.shape)
-        part_norm = np.linalg.norm(np.array(self.target_matrix[self.sigma_set]))
-        self.norm_bound = part_norm / np.sqrt(self.density)
-        print('est. norm: %s' % self.norm_bound)
-        return None
 
     def cg_approximate(self, r, x0=None, maxiter=100, eps=1e-9):
         self.init_condition(r, x0)
