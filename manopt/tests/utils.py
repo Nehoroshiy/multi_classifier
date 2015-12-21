@@ -26,4 +26,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-from basic_vector_transport import vector_transport_base
+
+import scipy as sp
+
+from scipy import sparse
+
+
+def generate_sigma_set(shape, percent):
+    return sp.sparse.random(*shape, density=percent).nonzero()

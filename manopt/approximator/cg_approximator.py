@@ -46,126 +46,6 @@ def closed_form_initial_guess(vec, delta, sigma_set):
     return np.abs(trace_first / trace_second)
 
 
-def conjugate_direction(x_prev, grad_prev, dir_prev, x, grad):
-    grad_prev_trans = grad_prev.transport(x)
-    dir_prev_trans = dir_prev.transport(x)
-
-    delta = grad - grad_prev_trans
-    delta_released = delta.release()
-    grad_prev_released = grad_prev_trans.release()
-    grad_released = grad.release()
-    beta = max(0, delta_released.scalar_product(grad_released) / grad_prev_released.frobenius_norm()**2)
-    dir_ = -grad + beta * dir_prev_trans
-    dir_released = dir_.release()
-
-    angle = grad_released.scalar_product(dir_released) / \
-            np.sqrt(dir_released.frobenius_norm()**2 * grad_released.frobenius_norm()**2)
-    if angle <= 0.1:
-        dir_ = grad
-    return dir_
-
-
-def armijo_backtracking(func, x, alpha, direction, conj_direction, maxiter=20):
-    """
-    Returns step and next point, minimizing given functional
-
-    Parameters
-    ----------
-    func : function
-        function to minimize
-    x : ManifoldElement
-        initial point
-    alpha : float
-        estimated line search parameter
-    direction : TangentVector
-        direction to move from initial point
-    conj_direction : TangentVector
-        conjugated direction
-
-    Returns
-    -------
-    x_new :
-        next point (x + step * direction)
-    step : float
-        optimal step
-    """
-    scale = -0.0001 * alpha
-    for i in range(maxiter):
-        x_new = svd_retraction(x + (0.5**i * alpha) * conj_direction.release(), x.r)
-        bound = (0.5**i * scale) * direction.release().scalar_product(conj_direction.release())
-        if func(x) - func(x_new) >= bound:
-            return x_new, 0.5**i * scale
-    return x_new, 0.5**maxiter * scale
-
-
-def cost_raw(a, elem, sigma_set):
-    """
-    Compute function 0.5 *|| a[sigma] - elem[sigma] ||_F^2
-
-    Parameters
-    ----------
-    a : np.ndarray or sp.sparse.spmatrix
-        matrix to approximate
-    elem : ManifoldElement
-        approximation
-    sigma_set : tuple of np.ndarrays
-        index set of x indices and y indices
-
-    Returns
-    -------
-    out: float
-        cost function
-    """
-    return 0.5 * sp.sparse.linalg.norm(elem.evaluate(sigma_set) - a) ** 2
-
-
-def init_condition(a, sigma_set, r, x0, eps):
-    density = 1.0 * len(sigma_set[0]) / np.prod(a.shape)
-    norm_bound = np.linalg.norm(np.array(a[sigma_set])) / np.sqrt(density)
-
-    if x0 is None:
-        x0 = ManifoldElement.rand(a.shape, r, norm=norm_bound)
-    x_, x = ManifoldElement(x0, r), ManifoldElement(x0, r)
-
-    grad = -TangentVector(x0, riemannian_grad_partial(x0, a, sigma_set, manifold_elems=True))
-    conj_, conj = TangentVector.zero(x), TangentVector.zero(x)
-    return x_, x, conj_, conj, grad, eps * norm_bound
-
-
-def cg_grad(x, a, sigma_set, grad):
-    riemannian_grad = riemannian_grad_partial(x, a, sigma_set, manifold_elems=True)
-    grad_, grad = grad, -TangentVector(x, riemannian_grad)
-    return grad_, grad
-
-
-def cg_step(x_, conj_, grad_, x, a, sigma_set, conj, grad):
-    conj_, conj = conj, conjugate_direction(x_, grad_, conj_, x, grad)
-
-    alpha = closed_form_initial_guess(conj, delta_on_sigma_set(x, a, sigma_set), sigma_set)
-    x_, x = x, armijo_backtracking(lambda x: cost_raw(a, x, sigma_set), x, alpha, grad, conj)[0]
-    return conj_, conj, x_, x
-
-
-def cg_fuck(a, sigma_set, r, x0=None, maxiter=900, eps=1e-9):
-    x_, x, conj_, conj, grad, delta = init_condition(a, sigma_set, r, x0, eps)
-
-    error_history = []
-
-    for it in range(maxiter):
-        grad_, grad = cg_grad(x, a, sigma_set, grad)
-        conj_, conj, x_, x = cg_step(x_, conj_, grad_, x, a, sigma_set, conj, grad)
-
-        error = grad.release().frobenius_norm()
-        error_history.append(error)
-
-        print('iter:{}, error: {}'.format(it, error_history[-1]))
-
-        if error < delta:
-            return x, it, error_history
-
-    return x, maxiter, error_history
-
-
 class CGApproximator(AbstractApproximator):
     def __init__(self):
         AbstractApproximator.__init__(self)
@@ -189,16 +69,11 @@ class CGApproximator(AbstractApproximator):
         self.target_matrix = a
         self.initialization(sigma_set)
 
-
         for rank in range(1, r):
             x0, it, err = self.cg_approximate(r=rank, x0=x0,
                                               maxiter=10, eps=eps)
         return self.cg_approximate(r=r, x0=x0, maxiter=maxiter, eps=eps)
-        """
-        for rank in range(1, r):
-            x0, it, err = cg_fuck(a, sigma_set, rank, x0=x0, maxiter=10, eps=eps)
-        return cg_fuck(a, sigma_set, r, x0=x0, maxiter=maxiter, eps=eps)
-        """
+
     def initialization(self, sigma_set=None):
         if sigma_set is None:
             self.sigma_set = self.target_matrix.nonzero()
@@ -215,43 +90,7 @@ class CGApproximator(AbstractApproximator):
         print('est. norm: %s' % self.norm_bound)
         return None
 
-    def cg(self, a, sigma_set, r, x0=None, maxiter=900, eps=1e-9):
-        x_, x, conj_, conj, grad, delta = init_condition(a, sigma_set, r, x0, eps)
-
-        error_history = []
-
-        for it in range(maxiter):
-            grad_, grad = cg_grad(x, a, sigma_set, grad)
-            conj_, conj, x_, x = cg_step(x_, conj_, grad_, x, a, sigma_set, conj, grad)
-
-            error = grad.release().frobenius_norm()
-            error_history.append(error)
-
-            print('iter:{}, error: {}'.format(it, error_history[-1]))
-
-            if error < delta:
-                return x, it, error_history
-
-        return x, maxiter, error_history
-
     def cg_approximate(self, r, x0=None, maxiter=100, eps=1e-9):
-        self.x_prev, self.x, self.conj_prev, self.conj, self.grad, delta = \
-            init_condition(self.target_matrix, self.sigma_set, r, x0=x0, eps=eps)
-        error_history = []
-        for it in range(maxiter):
-            self.grad_prev, self.grad = cg_grad(self.x, self.target_matrix, self.sigma_set, self.grad)
-            self.conj_prev, self.conj, self.x_prev, self.x =\
-                cg_step(self.x_prev, self.conj_prev, self.grad_prev, self.x,
-                        self.target_matrix, self.sigma_set, self.conj, self.grad)
-            error = self.grad.release().frobenius_norm()
-            error_history.append(error)
-            print('iter:{}, error: {}'.format(it, error_history[-1]))
-
-            if error < delta:
-                return self.x, it, error_history
-        return self.x, maxiter, error_history
-
-    def cg_approximate_old(self, r, x0=None, maxiter=100, eps=1e-9):
         self.init_condition(r, x0)
         error_history = []
         for it in range(maxiter):

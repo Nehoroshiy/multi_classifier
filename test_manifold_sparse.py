@@ -31,7 +31,7 @@ import scipy as sp
 from matplotlib import pyplot as plt
 from scipy.sparse import csr_matrix, lil_matrix
 
-from manopt.approximator import CGApproximator, ManifoldElement, cg_fuck
+from manopt.approximator import CGApproximator, ManifoldElement
 from manopt.approximator.cg import cg
 
 

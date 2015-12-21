@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 import numpy as np
 import scipy as sp
-from manopt.utils.test_utils import generate_sigma_set
+from utils import generate_sigma_set
 from scipy.sparse import csr_matrix, coo_matrix
 
 from manopt.approximator.lowrank_matrix import ManifoldElement
