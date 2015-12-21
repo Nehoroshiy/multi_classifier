@@ -31,8 +31,7 @@ import scipy as sp
 from matplotlib import pyplot as plt
 from scipy.sparse import csr_matrix, lil_matrix
 
-from manopt.approximator import CGApproximator, ManifoldElement
-from manopt.approximator.cg import cg
+from manopt.approximator import CGApproximator, GDApproximator, ManifoldElement, MGDApproximator
 
 
 def generate_sigma_set(shape, percent):
@@ -74,12 +73,8 @@ if __name__ == "__main__":
     #x, it, err = cg(a_sparse, sigma_set, r, maxiter=600)
     print('a nnz: {}'.format(a_sparse.size))
     print('real a norm: {}'.format(np.linalg.norm(a_full)))
-    u = np.fromfile('u_factor').reshape((-1, 1))
-    s = np.fromfile('s_factor')
-    v = np.fromfile('v_factor').reshape((1, -1))
 
 
-    #x0 = ManifoldElement((u, s, v), r=1)
     """
     x0=None
     x = x0
@@ -100,7 +95,7 @@ if __name__ == "__main__":
     x, it, err = cg_fuck(a_sparse, sigma_set, r, x0=x, maxiter=100, eps=1e-14)
     print('rank is {}'.format(r))
     """
-    approximator = CGApproximator()
+    approximator = MGDApproximator()
     x, it, err = approximator.approximate(a=a_sparse, r=2, sigma_set=sigma_set, eps=1e-14)
     print('eps of x - a: {}'.format(np.linalg.norm(x.full_matrix() - a_full) / np.linalg.norm(a_full)))
 
