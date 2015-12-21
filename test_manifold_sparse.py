@@ -27,12 +27,16 @@ THE SOFTWARE.
 """
 
 import numpy as np
+import scipy as sp
 from matplotlib import pyplot as plt
 from scipy.sparse import csr_matrix, lil_matrix
 
-from manopt import ManifoldElement
-from manopt.sparse.approx import approx
-from manopt.utils.test_utils import generate_sigma_set
+from manopt.approximator import CGApproximator, ManifoldElement, cg_fuck
+from manopt.approximator.cg import cg
+
+
+def generate_sigma_set(shape, percent):
+    return sp.sparse.random(*shape, density=percent).nonzero()
 
 np.set_printoptions(linewidth=450, suppress=True)
 
@@ -44,7 +48,7 @@ np.set_printoptions(linewidth=450, suppress=True)
 # 5. Try to make experimenting easier (unified way to make low-rank matrices,
 #       unified way to perform and compare algorithms and they quality)
 if __name__ == "__main__":
-    shape = (500, 500)
+    shape = (100, 100)
     r = 2
     opt_nnz = 10. * r * sum(shape)
     percent = opt_nnz / np.prod(shape)
@@ -70,12 +74,19 @@ if __name__ == "__main__":
     #x, it, err = cg(a_sparse, sigma_set, r, maxiter=600)
     print('a nnz: {}'.format(a_sparse.size))
     print('real a norm: {}'.format(np.linalg.norm(a_full)))
+    u = np.fromfile('u_factor').reshape((-1, 1))
+    s = np.fromfile('s_factor')
+    v = np.fromfile('v_factor').reshape((1, -1))
 
-    x = None
-    maxiter_ordinary = 20
+
+    #x0 = ManifoldElement((u, s, v), r=1)
+    """
+    x0=None
+    x = x0
+    maxiter_ordinary = 10
     for rank in range(1, r):
-        current_maxiter = np.log(rank) + 1
-        x, it, err = approx(a_sparse, sigma_set, rank, x0=x, method='gd', maxiter=int(maxiter_ordinary * current_maxiter), eps=1e-10)
+        current_maxiter = 1
+        x, it, err = cg_fuck(a_sparse, sigma_set, rank, x0=x, maxiter=int(maxiter_ordinary * current_maxiter), eps=1e-9)
         if it != int(maxiter_ordinary * current_maxiter):
             r = rank
             break
@@ -86,8 +97,11 @@ if __name__ == "__main__":
     r = 2
     print('real rank is {}'.format(r))
     x = ManifoldElement(x, r)
-    x, it, err = approx(a_sparse, sigma_set, r, x0=x, method='gd', maxiter=100, eps=1e-14)
+    x, it, err = cg_fuck(a_sparse, sigma_set, r, x0=x, maxiter=100, eps=1e-14)
     print('rank is {}'.format(r))
+    """
+    approximator = CGApproximator()
+    x, it, err = approximator.approximate(a=a_sparse, r=2, sigma_set=sigma_set, eps=1e-14)
     print('eps of x - a: {}'.format(np.linalg.norm(x.full_matrix() - a_full) / np.linalg.norm(a_full)))
 
 

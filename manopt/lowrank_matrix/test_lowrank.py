@@ -28,13 +28,10 @@ THE SOFTWARE.
 
 import numpy as np
 import scipy as sp
-
-from scipy import sparse
-from lowrank_matrix import ManifoldElement
-
+from manopt.utils.test_utils import generate_sigma_set
 from scipy.sparse import csr_matrix, coo_matrix
 
-from manopt.utils.test_utils import generate_sigma_set
+from manopt.approximator.lowrank_matrix import ManifoldElement
 
 
 def strict_check(manifold_element, original_matrix):

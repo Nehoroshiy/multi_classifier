@@ -36,7 +36,7 @@ import scipy as sp
 from pandas.io.common import ZipFile
 from scipy import sparse
 
-from manopt.sparse.approx.gd import cg
+from manopt.approximator import cg
 
 if sys.version_info[0] < 3:
     pass

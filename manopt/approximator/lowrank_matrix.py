@@ -33,33 +33,16 @@ from scipy import linalg, sparse
 
 from scipy.sparse import coo_matrix, csr_matrix, csc_matrix, lil_matrix
 
-from manopt.utils.approx_utils import csvd
+
+def csvd(a, r=None):
+    if r is None or r > min(a.shape):
+        r = min(a.shape)
+    u, s, v = np.linalg.svd(a, full_matrices=False)
+    return u[:, :r], s[:r], v[:r]
 
 
 def orth(a, eps=1e-12):
     return np.linalg.norm(a.T.dot(a) - np.eye(a.shape[1])) < eps * np.sqrt(a.shape[1])
-
-
-def torth(a):
-    return np.allclose(a.dot(a.T), np.eye(a.shape[0]))
-
-
-# TODO remove this function if it is not nessesary
-def indices_unveil(self, indices):
-    """
-
-    Parameters
-    ----------
-    self
-    indices
-
-    Returns
-    -------
-
-    """
-    indices = np.asarray(indices)
-    return np.vstack([np.repeat(indices[0], indices[1].size),
-                      np.tile(indices[1], indices[0].size)]).T
 
 
 class ManifoldElement(object):
@@ -80,8 +63,8 @@ class ManifoldElement(object):
     Examples
     --------
     a = np.random.random((10, 5))
-    approx = ManifoldElement(a, r=4)
-    approx_full = approx.full_matrix()
+    approximator = ManifoldElement(a, r=4)
+    approx_full = approximator.full_matrix()
     print(np.linalg.norm(a - approx_full) / np.linalg.norm(a))
 
     """
