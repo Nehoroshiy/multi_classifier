@@ -66,10 +66,14 @@ class CGApproximator(AbstractApproximator):
         self.target_matrix = a
         self.initialization(sigma_set)
 
-        for rank in range(1, r):
-            x0, it, err = self.cg_approximate(r=rank, x0=x0,
-                                              maxiter=20, eps=eps)
-        return self.cg_approximate(r=r, x0=x0, maxiter=maxiter, eps=eps)
+        all_err = []
+        #err = []
+        #for rank in range(1, r):
+        #    x0, it, err = self.cg_approximate(r=rank, x0=x0,
+        #                                      maxiter=10, eps=eps)
+        #    all_err += err
+        x, it, err = self.cg_approximate(r=r, x0=x0, maxiter=maxiter, eps=eps)
+        return x, it, all_err + err
 
     def cg_approximate(self, r, x0=None, maxiter=100, eps=1e-9):
         self.init_condition(r, x0)

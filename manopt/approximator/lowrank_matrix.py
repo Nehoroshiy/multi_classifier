@@ -115,7 +115,7 @@ class ManifoldElement(object):
                     self.u = self.u[:, :self.r].copy()
                     self.s = self.s[:self.r].copy()
                     self.v = self.v[:self.r, :].copy()
-                if not np.allclose(self.s.argsort(), np.arange(self.s.size)[::-1]):
+                if not (np.diff(self.s) <= 0).all():
                     self.rearrange()        # We lost ordering of s while performing addition
                 self.balance()              # We lost orthogonality while performing hadamard
             else:
@@ -170,7 +170,7 @@ class ManifoldElement(object):
         -------
         None
         """
-        mid, self.v = sp.linalg.rq(self.v)
+        mid, self.v = sp.linalg.rq(self.v, mode='economic')
         self.u = self.u.dot(np.diag(self.s).dot(mid))
         self.u, self.s, v = csvd(self.u)
         self.v = v.dot(self.v)
@@ -184,6 +184,8 @@ class ManifoldElement(object):
         -------
         None
         """
+        #self._balance()
+
         left_balanced = orth(self.u)
         right_balanced = orth(self.v.T)
         if left_balanced:
@@ -196,7 +198,9 @@ class ManifoldElement(object):
                 self._balance_left()
             else:
                 self._balance()
-        return
+
+        assert(self.is_valid())
+        return None
 
     def is_valid(self):
         """
@@ -213,8 +217,7 @@ class ManifoldElement(object):
         """
         left_balanced = orth(self.u)
         right_balanced = orth(self.v.T)
-        sigma_sorted = \
-            np.allclose(self.s.argsort(), np.arange(self.s.size)[::-1])
+        sigma_sorted = (np.diff(self.s) <= 0).all()
         return left_balanced and right_balanced and sigma_sorted
 
     def __add__(self, other):
@@ -416,20 +419,10 @@ class ManifoldElement(object):
         out : csr_matrix
             full matrix evaluated at sigma_set
         """
-        #idx_argsort = sigma_set[0].argsort()
-        #sigma_set[1][:] = sigma_set[1][idx_argsort]
-        #sigma_set[0][:] = sigma_set[0][idx_argsort]
         rows = self.u[sigma_set[0], :] * self.s
         cols = self.v[:, sigma_set[1]]
         data = (rows * cols.T).sum(1)
         assert(data.size == len(sigma_set[0]))
-        #return data
-        #data = np.zeros(len(sigma_set[0]))
-        #for (val, idx, count) in zip(*np.unique(sigma_set[0],
-        #                                       return_index=True,
-        #                                       return_counts=True)):
-        #    data[idx:idx + count] = np.dot(self.u[val, :] * self.s,
-        #                                   self.v[:, sigma_set[1][idx: idx + count]])
         return csr_matrix(coo_matrix((data, tuple(sigma_set)), shape=self.shape))
 
     def isclose(self, other, tol=1e-9):

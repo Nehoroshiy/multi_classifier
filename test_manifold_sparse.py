@@ -79,8 +79,44 @@ def approx_test_ranks(shape, ranks=None, maxiter=200):
     plt.show()
     return None
 
+
+def approx_test_random(approximator, shape, ranks=None, maxiter=200):
+    ranks = np.arange(1, 5, 1)*1 if ranks is None else np.asarray(ranks, dtype=int)
+
+    x = np.random.random(shape)
+    u_lowrank = np.random.normal(size=(shape[0], max(ranks)))
+    v_lowrank = np.random.normal(size=(max(ranks), shape[1]))
+
+    results = []
+    ys = []
+    for r in ranks:
+        y = u_lowrank[:, :r].dot(v_lowrank[:r, :])
+        ys.append(y)
+        opt_nnz = 10. * r * sum(shape)
+        percent = opt_nnz / np.prod(shape)
+        print('percent: {}'.format(percent))
+        sigma_set = generate_sigma_set(y.shape, percent)
+        data = y[sigma_set]
+        a_sparse = csr_matrix(coo_matrix((data, sigma_set), shape=shape))
+
+        results.append(approximator.approximate(a_sparse, r, sigma_set, maxiter=maxiter, eps=1e-10))
+    """
+    for i, (x, it, err) in enumerate(results):
+        box = ys[i]
+        print('eps of x - a: {} at r={}'.format(np.linalg.norm(x.full_matrix() - box[:]) / np.linalg.norm(box[:]), i+1))
+        err = np.pad(np.array(err) / np.linalg.norm(box[:]), (0, maxiter - len(err)), mode='constant')
+        plt.semilogy(np.arange(maxiter), err)
+    plt.legend([r'r=%s' % r for r in ranks[:]])
+    plt.show()
+    """
+    return None
+
+
 if __name__ == "__main__":
-    shapes = [(n, n) for n in 32*np.arange(1, 4)]
-    ranks = np.arange(1, 5)
-    shape = shapes[-1]
-    approx_test_ranks(shape)
+    import cProfile
+    #shapes = [(n, n) for n in 32*np.arange(1, 4)]
+    ranks = np.arange(1, 5, 1) * 5
+    shape = (500, 500)
+    #approx_test_ranks(shape)
+    cProfile.run('approx_test_random(GDApproximator(), shape, ranks[1:2], maxiter=50)')
+    #approx_test_random(GDApproximator(), shape, ranks[1:2])

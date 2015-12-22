@@ -59,9 +59,9 @@ class GDApproximator(AbstractApproximator):
         self.target_matrix = a
         self.initialization(sigma_set)
 
-        for rank in range(1, r):
-            x0, it, err = self.gd_approximate(r=rank, x0=x0,
-                                              maxiter=50, eps=eps)
+        #for rank in range(1, r):
+        #    x0, it, err = self.gd_approximate(r=rank, x0=x0,
+        #                                      maxiter=50, eps=eps)
         return self.gd_approximate(r=r, x0=x0, maxiter=maxiter, eps=eps)
 
     def gd_approximate(self, r, x0=None, maxiter=100, eps=1e-9):
@@ -98,11 +98,12 @@ class GDApproximator(AbstractApproximator):
         alpha = minimize_scalar(lambda x: self.cost_func(x), bounds=(0., 10.), method='bounded')['x']
         if alpha is None:
             alpha = 1.
+        print(alpha)
         self.x = svd_retraction(self.x + alpha * self.grad.release(), self.x.r)
-        # self.armijo_backtracking(lambda x: self.cost_raw(x), alpha)[0]
+        #self.armijo_backtracking(lambda x: self.cost_raw(x), alpha)[0]
         return None
 
-    def armijo_backtracking(self, func, alpha, maxiter=20):
+    def armijo_backtracking(self, alpha, maxiter=20):
         """
         Returns step and next point, minimizing given functional
 
