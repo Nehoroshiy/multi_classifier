@@ -489,10 +489,14 @@ class ManifoldElement(object):
 
 class ManifoldElemCached(ManifoldElement):
     def __init__(self, data, sigma_set, cached=None, r=None):
-        ManifoldElement.__init__(self, data, r)
-        self.sigma_set = sigma_set
-        self._cached = None
-        self._cached = cached if cached is not None else self.values()
+        if isinstance(data, ManifoldElemCached):
+            ManifoldElement.__init__((data.u, data.s, data.v), sigma_set, r=r)
+            self._cached = data.values()
+        else:
+            ManifoldElement.__init__(self, data, r)
+            self.sigma_set = sigma_set
+            self._cached = None
+            self._cached = cached if cached is not None else self.values()
 
     def __add__(self, other):
         if isinstance(other, np.ndarray):
@@ -574,3 +578,51 @@ class ManifoldElemCached(ManifoldElement):
             return self._cached.copy()
         else:
             return super(ManifoldElement, self).evaluate(self.sigma_set)
+
+    @staticmethod
+    def rand(shape, sigma_set, r, norm=None):
+        """
+        Generates ManifoldElement with parameters:
+        * U (shape[0], r) with elements picked from N(0, 1)
+        * \Sigma with sorted elements picked from N(0, 1), with desired norm, if given
+        * V^* (r, shape[1]) with elements picked from N(0, 1)
+        where N(0, 1) means standard normal distribution
+
+        Parameters
+        ----------
+        shape : tuple of ints
+            Output shape.
+        r : int
+            Desired rank
+        norm : float, optional
+            Desired frobenius norm of matrix
+
+        Returns
+        -------
+            out : ManifoldElement
+                Randomly generated matrix
+        """
+        m, n = shape
+
+        u = np.linalg.qr(np.random.randn(m, r))[0]
+        s = np.sort(np.abs(np.random.randn(r)))[::-1]
+        if norm is not None:
+            s *= (norm / np.linalg.norm(s))
+        v = sp.linalg.rq(np.random.randn(r, n), mode='economic')[1]
+        return ManifoldElemCached((u, s, v), sigma_set, r=r)
+
+    @staticmethod
+    def zeros(shape, sigma_set, r):
+        u = np.zeros((shape[0], r))
+        u[np.diag_indices(r)] = 1.0
+        s = np.zeros(r)
+        v = np.zeros((r, shape[1]))
+        v[np.diag_indices(r)] = 1.0
+        elem = ManifoldElement.rand(shape, r)
+        elem = ManifoldElemCached(elem, sigma_set,
+                                  cached=csr_matrix(coo_matrix((np.zeros(sigma_set[0].size),
+                                                                sigma_set), shape)))
+        elem.u = u
+        elem.s = s
+        elem.v = v
+        return elem

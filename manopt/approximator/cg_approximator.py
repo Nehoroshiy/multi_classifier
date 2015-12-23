@@ -29,7 +29,7 @@ THE SOFTWARE.
 import numpy as np
 import scipy as sp
 from scipy import sparse
-from lowrank_matrix import ManifoldElement
+from lowrank_matrix import ManifoldElement, ManifoldElemCached
 from approximator_api import AbstractApproximator
 from manifold_functions import TangentVector, svd_retraction
 from manifold_functions import riemannian_grad_partial, delta_on_sigma_set
@@ -95,8 +95,10 @@ class CGApproximator(AbstractApproximator):
 
     def init_condition(self, r, x0):
         if x0 is None:
-            x0 = ManifoldElement.rand(self.target_matrix.shape, r, norm=self.norm_bound)
-        self.x_prev, self.x = ManifoldElement(x0, r), ManifoldElement(x0, r)
+            x0 = ManifoldElemCached.rand(self.target_matrix.shape,
+                                            self.sigma_set, r, norm=self.norm_bound)
+        self.x_prev, self.x = ManifoldElemCached(x0, self.sigma_set, r=r),\
+                              ManifoldElemCached(x0, self.sigma_set, r=r)
         self.delta = delta_on_sigma_set(self.x, self.target_matrix, self.sigma_set)
         self.grad_partial = riemannian_grad_partial(self.x, self.target_matrix, self.sigma_set,
                                                     grad=self.delta, manifold_elems=True)
