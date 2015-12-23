@@ -158,7 +158,14 @@ def test_scalar_product(shape, r, niter=10):
         assert(np.isclose(left.scalar_product(right), np.trace(left_full.dot(right_full.T))))
 
 
+def fast_sum_test():
+    for _ in range(1000):
+        test_binary_operation((200, 100), 10, '+')
+
 if __name__ == '__main__':
+    import cProfile
+    cProfile.run("fast_sum_test()")
+    """
     # shape, r, niter
     args = ((200, 100), 10, 10)
 
@@ -173,5 +180,6 @@ if __name__ == '__main__':
     sym_args = ((200, 200), 10, 10)
 
     test_trace(*sym_args)
+    """
 
 

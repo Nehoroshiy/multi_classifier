@@ -92,7 +92,7 @@ def approx_test_random(approximator, shape, ranks=None, maxiter=200):
     for r in ranks:
         y = u_lowrank[:, :r].dot(v_lowrank[:r, :])
         ys.append(y)
-        opt_nnz = 10. * r * sum(shape)
+        opt_nnz = 5. * r * sum(shape)
         percent = opt_nnz / np.prod(shape)
         print('percent: {}'.format(percent))
         sigma_set = generate_sigma_set(y.shape, percent)
@@ -100,7 +100,7 @@ def approx_test_random(approximator, shape, ranks=None, maxiter=200):
         a_sparse = csr_matrix(coo_matrix((data, sigma_set), shape=shape))
 
         results.append(approximator.approximate(a_sparse, r, sigma_set, maxiter=maxiter, eps=1e-10))
-    """
+
     for i, (x, it, err) in enumerate(results):
         box = ys[i]
         print('eps of x - a: {} at r={}'.format(np.linalg.norm(x.full_matrix() - box[:]) / np.linalg.norm(box[:]), i+1))
@@ -108,7 +108,7 @@ def approx_test_random(approximator, shape, ranks=None, maxiter=200):
         plt.semilogy(np.arange(maxiter), err)
     plt.legend([r'r=%s' % r for r in ranks[:]])
     plt.show()
-    """
+
     return None
 
 
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     import cProfile
     #shapes = [(n, n) for n in 32*np.arange(1, 4)]
     ranks = np.arange(1, 5, 1) * 5
-    shape = (500, 500)
+    shape = (400, 400)
     #approx_test_ranks(shape)
-    cProfile.run('approx_test_random(GDApproximator(), shape, ranks[1:2], maxiter=50)')
+    cProfile.run('approx_test_random(CGApproximator(), shape, ranks[:])')
     #approx_test_random(GDApproximator(), shape, ranks[1:2])

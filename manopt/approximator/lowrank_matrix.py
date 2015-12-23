@@ -199,7 +199,7 @@ class ManifoldElement(object):
             else:
                 self._balance()
 
-        assert(self.is_valid())
+        #assert(self.is_valid())
         return None
 
     def is_valid(self):
@@ -228,15 +228,7 @@ class ManifoldElement(object):
             u = np.hstack((self.u, other.u))
             s = np.concatenate((self.s, other.s))
             v = np.vstack((self.v, other.v))
-            u, r = np.linalg.qr(u)
-            rt, v = sp.linalg.rq(v, mode='economic')
-            middle_factor = r.dot(np.diag(s)).dot(rt)
-            u_mid, s, v_mid = np.linalg.svd(middle_factor, full_matrices=False)
-            u = u.dot(u_mid)
-            v = v_mid.dot(v)
-
-            factorization = (u, s, v)
-            return ManifoldElement(factorization)
+            return ManifoldElement((u, s, v))
         else:
             raise ValueError(
                 "operation is not supported for ManifoldElement and {}".format(type(other)))
@@ -493,3 +485,92 @@ class ManifoldElement(object):
         elem.s = s
         elem.v = v
         return elem
+
+
+class ManifoldElemCached(ManifoldElement):
+    def __init__(self, data, sigma_set, cached=None, r=None):
+        ManifoldElement.__init__(self, data, r)
+        self.sigma_set = sigma_set
+        self._cached = None
+        self._cached = cached if cached is not None else self.values()
+
+    def __add__(self, other):
+        if isinstance(other, np.ndarray):
+            other = ManifoldElemCached(other, self.sigma_set, r=self.r)
+            return self.__add__(other)
+        elif isinstance(other, ManifoldElemCached):
+            u = np.hstack((self.u, other.u))
+            s = np.concatenate((self.s, other.s))
+            v = np.vstack((self.v, other.v))
+            cached = self.values() + other.values()
+            return ManifoldElemCached((u, s, v), self.sigma_set, cached=cached)
+        else:
+            raise ValueError(
+                "operation is not supported for ManifoldElement and {}".format(type(other)))
+
+    def __radd__(self, other):
+        if not isinstance(other, np.ndarray) or not isinstance(other, ManifoldElemCached):
+            raise ValueError(
+                "operation is not supported for ManifoldElement and {}".format(type(other)))
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        if isinstance(other, np.ndarray):
+            other = ManifoldElemCached(other, self.sigma_set, r=self.r)
+            return self.__sub__(other)
+        elif isinstance(other, ManifoldElemCached):
+            return self + (-other)
+        else:
+            raise ValueError(
+                "operation is not supported for ManifoldElement and {}".format(type(other)))
+
+    def __rsub__(self, other):
+        if not isinstance(other, np.ndarray) or not isinstance(other, ManifoldElemCached):
+            raise ValueError(
+                "operation is not supported for ManifoldElement and {}".format(type(other)))
+        return self.__sub__(other)
+
+    def __neg__(self):
+        return ManifoldElemCached((-self.u, self.s, self.v),
+                                  self.sigma_set, cached=-self.values(), r=self.r)
+
+    def __mul__(self, other):
+        if np.isscalar(other):
+            return ManifoldElemCached((self.u, self.s * other, self.v), self.sigma_set, r=self.r)
+        if isinstance(other, ManifoldElemCached):
+            if self.shape != other.shape:
+                raise ValueError("Shapes {} and {} are not equal.".format(self.shape, other.shape))
+            u = np.zeros((self.shape[0], self.r * other.r))
+            for i in range(self.shape[0]):
+                u[i, :] = np.kron(self.u[i, :], other.u[i, :])
+            s = np.kron(self.s, other.s)
+            v = np.zeros((self.r * other.r, self.shape[1]))
+            for i in range(self.shape[1]):
+                v[:, i] = np.kron(self.v[:, i], other.v[:, i])
+            return ManifoldElemCached((u, s, v), self.sigma_set,
+                                      cached=self.values().multiply(other.values()))
+        else:
+            raise ValueError("mul supports only scalars and ManifoldElement instances")
+
+    def __rmul__(self, other):
+        # TODO do we need this right-side operator?
+        # if yes, make it more clever
+        if np.isscalar(other):
+            cached = self._cached * other
+            return ManifoldElemCached((self.u, self.s * other, self.v),
+                                         self.sigma_set, cached=cached, r=self.r)
+        else:
+            raise NotImplementedError('rmul operator is not implemented, except for scalars')
+
+    def transpose(self):
+        return ManifoldElemCached((self.v.T, self.s, self.u.T), self.sigma_set, r=self.r)
+
+    @property
+    def T(self):
+        return self.transpose()
+
+    def values(self):
+        if self._cached is not None:
+            return self._cached.copy()
+        else:
+            return super(ManifoldElement, self).evaluate(self.sigma_set)

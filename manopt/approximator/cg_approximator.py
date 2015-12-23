@@ -56,6 +56,8 @@ class CGApproximator(AbstractApproximator):
         self.x_prev, self.x = None, None
         self.grad_prev, self.grad = None, None
         self.conj_prev, self.conj = None, None
+        self.delta = None
+        self.grad_partial = None
 
     def approximate(self, a, r, sigma_set=None, x0=None, maxiter=900, eps=EPS):
         return self._approximate(a, r, sigma_set=sigma_set, x0=x0, maxiter=maxiter, eps=eps)
@@ -95,26 +97,25 @@ class CGApproximator(AbstractApproximator):
         if x0 is None:
             x0 = ManifoldElement.rand(self.target_matrix.shape, r, norm=self.norm_bound)
         self.x_prev, self.x = ManifoldElement(x0, r), ManifoldElement(x0, r)
-        self.grad = -TangentVector(self.x, riemannian_grad_partial(self.x, self.target_matrix,
-                                                               self.sigma_set, manifold_elems=True))
+        self.delta = delta_on_sigma_set(self.x, self.target_matrix, self.sigma_set)
+        self.grad_partial = riemannian_grad_partial(self.x, self.target_matrix, self.sigma_set,
+                                                    grad=self.delta, manifold_elems=True)
+        self.grad = -TangentVector(self.x, self.grad_partial)
         self.grad_prev = self.grad
         self.conj_prev, self.conj = TangentVector.zero(self.x), TangentVector.zero(self.x)
         return None
 
     def cg_grad(self):
-        riemannian_grad = riemannian_grad_partial(self.x, self.target_matrix,
-                                                  self.sigma_set, manifold_elems=True)
-        self.grad_prev, self.grad = self.grad, -TangentVector(self.x, riemannian_grad)
+        self.delta = delta_on_sigma_set(self.x, self.target_matrix, self.sigma_set)
+        self.grad_partial = riemannian_grad_partial(self.x, self.target_matrix, self.sigma_set,
+                                                    grad=self.delta, manifold_elems=True)
+        self.grad_prev, self.grad = self.grad, -TangentVector(self.x, self.grad_partial)
         return None
 
     def cg_step(self):
         self.conj_prev, self.conj = self.conj, self.conjugate_direction()
 
-        alpha = closed_form_initial_guess(self.conj,
-                                          delta_on_sigma_set(self.x,
-                                                             self.target_matrix,
-                                                             self.sigma_set),
-                                          self.sigma_set)
+        alpha = closed_form_initial_guess(self.conj, self.delta, self.sigma_set)
         self.x_prev, self.x = \
             self.x, self.armijo_backtracking(lambda x: self.cost_raw(x), alpha)[0]
         return None
