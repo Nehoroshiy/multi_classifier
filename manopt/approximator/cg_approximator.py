@@ -1,35 +1,11 @@
 """
-Copyright (c) 2015-2016 Constantine Belev
-
-
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+2015-2016 Constantine Belev const.belev@ya.ru
 """
 
 import numpy as np
 import scipy as sp
 from scipy import sparse
-from lowrank_matrix import ManifoldElement, ManifoldElemCached
+from lowrank_matrix import ManifoldElement
 from approximator_api import AbstractApproximator
 from manifold_functions import TangentVector, svd_retraction
 from manifold_functions import riemannian_grad_partial, delta_on_sigma_set
@@ -95,10 +71,8 @@ class CGApproximator(AbstractApproximator):
 
     def init_condition(self, r, x0):
         if x0 is None:
-            x0 = ManifoldElemCached.rand(self.target_matrix.shape,
-                                            self.sigma_set, r, norm=self.norm_bound)
-        self.x_prev, self.x = ManifoldElemCached(x0, self.sigma_set, r=r),\
-                              ManifoldElemCached(x0, self.sigma_set, r=r)
+            x0 = ManifoldElement.rand(self.target_matrix.shape, r, norm=self.norm_bound)
+        self.x_prev, self.x = ManifoldElement(x0, r), ManifoldElement(x0, r)
         self.delta = delta_on_sigma_set(self.x, self.target_matrix, self.sigma_set)
         self.grad_partial = riemannian_grad_partial(self.x, self.target_matrix, self.sigma_set,
                                                     grad=self.delta, manifold_elems=True)
