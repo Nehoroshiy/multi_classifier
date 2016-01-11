@@ -45,7 +45,7 @@ class GDApproximator(AbstractApproximator):
         error_history = []
         for it in range(maxiter):
             self.step()
-            error_history.append(self.error())
+            error_history.append(self.loss())
             print('it: %s, error: %s' % (it, error_history[-1]))
             if error_history[-1] < self.norm_bound * eps:
                 return self.x, it, error_history

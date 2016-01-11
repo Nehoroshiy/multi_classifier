@@ -37,7 +37,7 @@ class AbstractApproximator():
     def step(self):
         raise NotImplementedError()
 
-    def error(self):
+    def loss(self):
         if self.grad is not None:
             return self.grad.release().frobenius_norm()
         else:
