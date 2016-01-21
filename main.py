@@ -31,6 +31,7 @@ if __name__ == "__main__":
     # This should be identical to the validation that you did for the SVM; save    #
     # the best trained softmax classifer in best_softmax.                          #
     ################################################################################
+    """
     best_val = 0.
     for rate in np.linspace(learning_rates[0], learning_rates[1], 3):
         for reg_str in np.linspace(regularization_strengths[0], regularization_strengths[1], 3):
@@ -43,11 +44,11 @@ if __name__ == "__main__":
             if best_val < accuracy(y_val, pred_val):
                 best_val = accuracy(y_val, pred_val)
             results[(rate, reg_str)] = (accuracy(y_train, pred_train), accuracy(y_val, pred_val))
-
+    """
     ################################################################################
     #                              END OF YOUR CODE                                #
     ################################################################################
-
+    """
     # Print out results.
     for lr, reg in sorted(results):
         train_accuracy, val_accuracy = results[(lr, reg)]
@@ -55,3 +56,14 @@ if __name__ == "__main__":
                     lr, reg, train_accuracy, val_accuracy)
 
     print 'best validation accuracy achieved during cross-validation: %f' % best_val
+    """
+
+    rate = 5e-7
+    reg_str = 5e4
+    print('rate: {}, reg: {}'.format(rate, reg_str))
+    sm = Softmax()
+    sm.train(X_train, y_train, rate, reg_str)
+    pred_train, pred_test = None, None
+    pred_train = sm.predict(X_train)
+    pred_val = sm.predict(X_val)
+    print('train acc: {}, val acc: {}'.format(accuracy(y_train, pred_train), accuracy(y_val, pred_val)))
