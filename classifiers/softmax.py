@@ -1,6 +1,7 @@
 import numpy as np
 from random import shuffle
 
+
 def softmax_loss_naive(W, X, y, reg):
     """
               Softmax loss function, naive implementation (with loops)
@@ -91,6 +92,8 @@ class Softmax():
     def __init__(self, learning_rate=1e-6, reg=5e4):
         self.learn_rate = learning_rate
         self.reg = reg
+        self.batch_size = None
+        self.W = None
 
     def fit(self, x, y, init=None, eps=1e-5, batch_size=64):
         self.batch_size = min(batch_size, x.shape[1])
@@ -100,9 +103,9 @@ class Softmax():
         self.W = np.array(init, dtype=float)
         loss = 1.
         it = 1
-        while (loss > eps):
+        while loss > eps:
             indices = np.random.choice(x.shape[1], batch_size, replace=False)
-            loss, grad = softmax_loss_vectorized(self.W, self.x[:, indices], self.y[indices])
+            loss, grad = softmax_loss_vectorized(self.W, x[:, indices], y[indices])
             self.W -= self.learn_rate * grad
             it += 1
         print('Process converges after {} iterations'.format(it))
