@@ -63,6 +63,8 @@ def get_cifar10_data(num_training=49000, num_validation=1000, num_test=1000):
     SVM, but condensed to a single function.
     """
     # Load the raw CIFAR-10 data
+    import os
+    print(os.curdir)
     cifar10_dir = 'dataset/datasets/cifar-10-batches-py'
     X_train, y_train, X_test, y_test = load_CIFAR10(cifar10_dir)
 
@@ -83,7 +85,7 @@ def get_cifar10_data(num_training=49000, num_validation=1000, num_test=1000):
     X_test = np.reshape(X_test, (X_test.shape[0], -1))
 
     # Normalize the data: subtract the mean image
-    mean_image = np.mean(X_train, axis = 0)
+    mean_image = np.mean(X_train, axis=0)
     X_train -= mean_image
     X_val -= mean_image
     X_test -= mean_image

@@ -73,6 +73,40 @@ def riemannian_grad_full(x, a, sigma_set, grad=None):
     return mid + u + v
 
 
+def gradient_projection_partial(x, grad):
+    """
+    Riemannian projection of a gradient
+
+    Compute projection of a gradient at tangent space to manifold at x.
+
+    Projection has the form
+    $Proj(Z) = UU^*Z + ZVV^* + UU^*ZVV^*$
+
+    Parameters
+    ----------
+    x : ManifoldElement, shape (M, N)
+        Rank-r manifold element in which we compute gradient
+    a : sparse matrix, shape (M, N)
+        Matrix that we need to approximate -- it has nonzero entries only
+        on sigma_set
+    sigma_set : array_like
+        set of indices in which matrix a can be evaluated
+    grad : sparse matrix, shape (M, N), optional
+        gradient given for being projected
+
+    Returns
+    -------
+    out : ManifoldElement
+        Projection of a gradient onto the Tangent space at x
+    """
+    left_projected = grad.T.dot(x.u)
+    right_projected = grad.dot(x.v.T)
+    mid = right_projected.rdot(x.u.T)
+    u = right_projected - mid.rdot(x.u)
+    v = left_projected - mid.T.rdot(x.v.T)
+    return ManifoldElement(mid, x.r), ManifoldElement(u, x.r), ManifoldElement(v.T, x.r)
+
+
 def riemannian_grad_partial(x, a, sigma_set, grad=None, manifold_elems=False):
     """
     Riemannian gradient as a parts from which one can restore it
@@ -217,6 +251,7 @@ class TangentVector():
                     or self.m.shape[0] != self.u.shape[1]\
                     or self.m.shape[1] != self.v.shape[0]:
                 raise ValueError("M, U_p and V_p must be rank-r matrices")
+            self.shape = (self.u.shape[0], self.v.shape[1])
 
     def __neg__(self):
         return TangentVector(self.base, (-self.m, -self.u, -self.v))

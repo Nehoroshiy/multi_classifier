@@ -22,7 +22,7 @@ def closed_form_initial_guess(vec, delta, sigma_set):
     return np.abs(trace_first / trace_second)
 
 
-class CGApproximator(AbstractApproximator):
+class KronApproximator(AbstractApproximator):
     def __init__(self):
         AbstractApproximator.__init__(self)
         self.target_matrix = None
@@ -45,11 +45,11 @@ class CGApproximator(AbstractApproximator):
         self.initialization(sigma_set)
 
         all_err = []
-        err = []
-        for rank in range(1, r):
-            x0, it, err = self.cg_approximate(r=rank, x0=x0,
-                                              maxiter=20, eps=eps)
-            all_err += err
+        #err = []
+        #for rank in range(1, r):
+        #    x0, it, err = self.cg_approximate(r=rank, x0=x0,
+        #                                      maxiter=10, eps=eps)
+        #    all_err += err
         x, it, err = self.cg_approximate(r=r, x0=x0, maxiter=maxiter, eps=eps)
         return x, it, all_err + err
 
@@ -73,8 +73,6 @@ class CGApproximator(AbstractApproximator):
         if x0 is None:
             x0 = ManifoldElement.rand(self.target_matrix.shape, r, norm=self.norm_bound)
         self.x_prev, self.x = ManifoldElement(x0, r), ManifoldElement(x0, r)
-        self.x_prev.randomize_last()
-        self.x.randomize_last()
         self.delta = delta_on_sigma_set(self.x, self.target_matrix, self.sigma_set)
         self.grad_partial = riemannian_grad_partial(self.x, self.target_matrix, self.sigma_set,
                                                     grad=self.delta, manifold_elems=True)
@@ -165,3 +163,5 @@ class CGApproximator(AbstractApproximator):
         if angle <= 0.1:
             conj = self.grad
         return conj
+
+

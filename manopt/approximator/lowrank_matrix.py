@@ -47,7 +47,7 @@ class ManifoldElement(object):
     def __init__(self, data, r=None):
         if isinstance(data, ManifoldElement):
             if r is None:
-                ManifoldElement.__init__(self, data, data.r)
+                self.__init__(data, data.r)
             elif r <= data.r:
                 self.u = data.u[:, :r].copy()
                 self.s = data.s[:r].copy()
@@ -461,3 +461,46 @@ class ManifoldElement(object):
         elem.s = s
         elem.v = v
         return elem
+
+    @staticmethod
+    def column_stack(column, n):
+        if np.linalg.norm(column) == 0:
+            return ManifoldElement.zeros((column.size, n), r=1)
+        u = column.reshape((column.size, 1)) / np.linalg.norm(column)
+        s = np.array([np.linalg.norm(column)])
+        v = np.ones(n).reshape((1, n))
+        return ManifoldElement((u, s, v))
+
+    @staticmethod
+    def row_stack(row, m):
+        if np.linalg.norm(row) == 0:
+            return ManifoldElement.zeros((m, row.size), r=1)
+        u = np.ones(m, dtype=row.dtype).reshape((m, 1))
+        s = np.array([np.linalg.norm(row)])
+        v = row.reshape((1, row.size)) / np.linalg.norm(row)
+        return ManifoldElement((u, s, v))
+
+    def randomize_last(self):
+        if self.r < 1:
+            return None
+        self.u[:, self.r - 1] = np.random.randn(self.shape[0])
+        self.v[self.r - 1] = np.random.randn(self.shape[1])
+        self.s[-1] = 1.0 if self.r == 1 else self.s[-2]/10
+        return None
+
+    def sum(self, axis=None):
+        if axis is None or axis == (0, 1):
+            left = np.ones((1, self.shape[0]))
+            right = np.ones((self.shape[1], 1))
+            return (left.dot(self.u) * self.s).dot(self.v.dot(right))[0, 0]
+        elif axis == 0 or -2:
+            left = np.ones((1, self.shape[0]))
+            return ((left.dot(self.u) * self.s).dot(self.v))[0]
+        elif axis == 1 or -1:
+            right = np.ones((self.shape[1], 1))
+            return (self.u * self.s).dot(self.v.dot(right))[:, 0]
+        else:
+            raise ValueError('axis must be 0, 1 or tuple')
+
+    def copy(self):
+        return ManifoldElement(self, self.r)
