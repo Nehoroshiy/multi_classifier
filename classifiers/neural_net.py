@@ -4,7 +4,7 @@
 
 import numpy as np
 from manopt import ManifoldElement
-from layers import affine_forward, affine_backward, softmax_loss
+from layers_lowrank import affine_forward, affine_backward, softmax_loss
 import matplotlib.pyplot as plt
 
 

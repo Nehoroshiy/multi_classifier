@@ -62,7 +62,7 @@ class ManifoldElement(object):
                 self.s[:data.r] = data.s
                 self.v[:data.r, :] = data.v
                 self.shape = data.shape
-                self.r = data.r
+                self.r = r
         elif isinstance(data, np.ndarray):
             self.r = min(data.shape) if r is None else min(min(data.shape), r)
             self.shape = data.shape

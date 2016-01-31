@@ -3,6 +3,7 @@
 """
 
 from black_box import BlackBox
+from image_approximator import ImageApproximator
 from cg_approximator import CGApproximator
 from gd_approximator import GDApproximator
 from mgd_approximator import MGDApproximator

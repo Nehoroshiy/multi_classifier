@@ -13,7 +13,7 @@ def frobenius_norm(x):
         return np.linalg.norm(x)
 
 
-def affine_forward(x, w, b):
+def affine_forward_lowrank(x, w, b):
     """
     Computes the forward pass for an affine (fully-connected) layer.
 

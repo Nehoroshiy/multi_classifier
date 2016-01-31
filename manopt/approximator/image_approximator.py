@@ -2,6 +2,11 @@
 2015-2016 Constantine Belev const.belev@ya.ru
 """
 
+
+"""
+2015-2016 Constantine Belev const.belev@ya.ru
+"""
+
 import numpy as np
 import scipy as sp
 from scipy import sparse
@@ -9,7 +14,9 @@ from lowrank_matrix import ManifoldElement
 from approximator_api import AbstractApproximator
 from manifold_functions import TangentVector, svd_retraction
 from manifold_functions import riemannian_grad_partial, delta_on_sigma_set
-from scipy.sparse import linalg, csc_matrix
+from scipy.sparse import linalg, csc_matrix, coo_matrix
+
+from sklearn.neighbors import KDTree
 
 
 EPS = 1e-9
@@ -22,13 +29,14 @@ def closed_form_initial_guess(vec, delta, sigma_set):
     return np.abs(trace_first / trace_second)
 
 
-class CGApproximator(AbstractApproximator):
+class ImageApproximator(AbstractApproximator):
     def __init__(self):
         AbstractApproximator.__init__(self)
         self.target_matrix = None
         self.density = None
         self.norm_bound = None
         self.sigma_set = None
+        self.sigma_tree = None
         self.x_prev, self.x = None, None
         self.grad_prev, self.grad = None, None
         self.conj_prev, self.conj = None, None
@@ -43,6 +51,7 @@ class CGApproximator(AbstractApproximator):
             raise ValueError("target matrix must be provided")
         self.target_matrix = a
         self.initialization(sigma_set)
+        self.sigma_tree = KDTree(np.asarray(sigma_set).T, metric='manhattan')
 
         all_err = []
         err = []
@@ -74,6 +83,8 @@ class CGApproximator(AbstractApproximator):
     def init_condition(self, r, x0):
         if x0 is None:
             x0 = ManifoldElement.rand(self.target_matrix.shape, r, norm=self.norm_bound)
+            x0.u = np.abs(x0.u)
+            x0.v = np.abs(x0.v)
         self.x_prev, self.x = ManifoldElement(x0, r), ManifoldElement(x0, r)
         #self.x_prev.randomize_last()
         #self.x.randomize_last()
@@ -87,6 +98,18 @@ class CGApproximator(AbstractApproximator):
 
     def cg_grad(self):
         self.delta = delta_on_sigma_set(self.x, self.target_matrix, self.sigma_set)
+        x_full = self.x.full_matrix()
+        sigma_neg = (x_full < 0).nonzero()
+        if len(sigma_neg[0]):
+            closest_indices = self.sigma_tree.query(np.asarray(sigma_neg).T, return_distance=False).ravel()
+            closest_set = (self.sigma_set[0][closest_indices], self.sigma_set[1][closest_indices])
+            x_data = np.array(x_full[sigma_neg]).ravel()
+
+            x_alignment = np.array(self.target_matrix[closest_set]).ravel()
+            sigma_all = (np.hstack((self.sigma_set[0], sigma_neg[0])),
+                         np.hstack((self.sigma_set[1], sigma_neg[1])))
+            data_all = np.hstack((np.array(self.delta[self.sigma_set]).ravel(), x_data - x_alignment))
+            self.delta = coo_matrix((data_all, sigma_all), shape=self.delta.shape)
         self.grad_partial = riemannian_grad_partial(self.x, self.target_matrix, self.sigma_set,
                                                     grad=self.delta, manifold_elems=True)
         self.grad_prev, self.grad = self.grad, -TangentVector(self.x, self.grad_partial)

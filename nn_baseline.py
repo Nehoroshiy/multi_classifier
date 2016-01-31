@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from classifier_trainer import ClassifierTrainer
 from gradient_check import eval_numerical_gradient
-from classifiers.neural_net_baseline import *
+from classifiers.neural_net_baseline_mod import *
 from dataset import get_cifar10_data
 
 
@@ -59,11 +59,11 @@ if __name__ == '__main__':
             verbose=True)
 
 
-    hidden_size = 1000
+    hidden_size = 250
 
     model = init_two_layer_model(X_train.shape[1], hidden_size, classes)
     trainer = ClassifierTrainer()
     best_model, loss_history, train_acc_history, val_acc_history = trainer.train(
               X_train, y_train, X_val, y_val, model, two_layer_net,
-              reg=0.001, momentum=0.9, learning_rate=0.0001, batch_size=50, num_epochs=1,
+              reg=0.001, update='sgd', momentum=0.9, learning_rate=0.0001, batch_size=50, num_epochs=2,
               acc_frequency=50, verbose=True)
